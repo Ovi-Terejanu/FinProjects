@@ -1,0 +1,2769 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Niural AI — Spend Insights</title>
+<link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --ink:#111111; --ink60:rgba(17,17,17,.55); --ink30:rgba(17,17,17,.28); --ink08:rgba(17,17,17,.06); --ink04:rgba(17,17,17,.03);
+  --white:#fff; --page:#fafafa; --rule:#e8e8e8; --rule-lt:#f0f0f0;
+  --accent:#5b4fe0; --accent-m:rgba(91,79,224,.55); --accent-lt:rgba(91,79,224,.1); --accent-mid:rgba(91,79,224,.4);
+  --pos:#1a7a4a; --pos-bg:rgba(26,122,74,.08); --neg:#c0392b; --neg-bg:rgba(192,57,43,.08); --amb:#b45309; --amb-bg:rgba(180,83,9,.08);
+  --c1:#5b4fe0; --c2:#2563eb; --c3:#0891b2; --c4:#059669; --c5:#d97706; --c6:#dc2626; --c7:#7c3aed; --c8:#be185d; --c9:#065f46; --c10:#1e3a5f;
+  --f:'DM Sans',sans-serif; --fd:'Libre Baskerville',Georgia,serif; --fm:'DM Mono',monospace;
+}
+html{font-size:14px;scroll-behavior:smooth}
+body{background:var(--page);color:var(--ink);font-family:var(--f);line-height:1.5;-webkit-font-smoothing:antialiased}
+
+/* ── LOGIN ── */
+#login{position:fixed;inset:0;z-index:999;background:linear-gradient(135deg,#1a1060 0%,#2d1b80 55%,#5b4fe0 100%);display:flex;align-items:center;justify-content:center}
+#login.gone{display:none}
+.lc{width:100%;max-width:400px;padding:2.5rem;position:relative}
+.lc::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,rgba(255,255,255,.5),transparent)}
+.l-eye{font-family:var(--fm);font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:rgba(255,255,255,.4);margin-bottom:1.75rem;display:flex;align-items:center;gap:10px}
+.l-eye::after{content:'';flex:1;height:1px;background:rgba(255,255,255,.1)}
+.l-h{font-family:var(--fd);font-size:26px;font-weight:700;color:#fff;line-height:1.2;margin-bottom:.35rem}
+.l-s{font-size:13px;color:rgba(255,255,255,.4);margin-bottom:2rem;font-weight:300}
+.lf{margin-bottom:14px}
+.lf label{display:block;font-family:var(--fm);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:rgba(255,255,255,.4);margin-bottom:5px}
+.lf input{width:100%;height:42px;padding:0 14px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:4px;color:#fff;font-size:14px;font-family:var(--f);outline:none;transition:border-color .15s}
+.lf input::placeholder{color:rgba(255,255,255,.22)}
+.lf input:focus{border-color:rgba(255,255,255,.4)}
+.lf input.err{border-color:#e07070;animation:shake .35s}
+.lbtn{width:100%;height:42px;margin-top:.4rem;background:#fff;color:var(--accent);border:none;border-radius:4px;font-family:var(--fd);font-size:14px;font-weight:700;cursor:pointer;transition:opacity .15s}
+.lbtn:hover{opacity:.9}
+.lerr{font-family:var(--fm);font-size:11px;color:#fca5a5;margin-top:.65rem;text-align:center;min-height:16px;opacity:0;transition:opacity .2s}
+.lerr.show{opacity:1}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+
+/* ── APP ── */
+#app{display:none}
+#app.on{display:block}
+
+/* ── TOPBAR ── */
+.topbar{position:sticky;top:0;z-index:100;background:rgba(255,255,255,.95);backdrop-filter:blur(10px);border-bottom:1px solid var(--rule);display:flex;align-items:center;justify-content:space-between;padding:0 2rem;height:50px;box-shadow:0 1px 6px rgba(0,0,0,.04)}
+.tb-l{display:flex;align-items:center;gap:16px}
+.tb-logo{height:26px;width:auto;max-width:140px;object-fit:contain;display:block}
+.tb-div{width:1px;height:16px;background:var(--rule)}
+.tb-title{font-family:var(--fm);font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink60)}
+.tb-r{display:flex;align-items:center;gap:8px}
+.badge{font-family:var(--fm);font-size:10px;padding:3px 9px;border-radius:2px;border:1px solid var(--rule);color:var(--ink60);background:var(--page)}
+.badge.live{border-color:rgba(26,122,74,.35);color:var(--pos);background:var(--pos-bg)}
+.tbtn{height:30px;padding:0 12px;border:1px solid var(--rule);border-radius:3px;background:transparent;color:var(--ink60);font-family:var(--fm);font-size:10px;letter-spacing:.05em;text-transform:uppercase;cursor:pointer;display:flex;align-items:center;gap:5px;white-space:nowrap;transition:all .12s}
+.tbtn:hover{border-color:var(--accent);color:var(--accent)}
+.tbtn.up{border-color:var(--accent);color:var(--accent);background:var(--accent-lt)}
+.uwrap{position:relative}
+.uwrap input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+
+
+/* ── CHART CONTEXT MENU ── */
+.chart-menu-btn{position:absolute;top:6px;right:6px;z-index:10;width:24px;height:24px;border-radius:3px;border:1px solid var(--rule);background:var(--white);cursor:pointer;display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .15s;color:var(--ink60)}
+.cw:hover .chart-menu-btn,.card:hover .chart-menu-btn{opacity:1}
+.chart-menu-btn:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-lt)}
+.ctx-menu{position:absolute;top:32px;right:6px;z-index:200;background:var(--white);border:1px solid var(--rule);border-radius:4px;box-shadow:0 4px 16px rgba(0,0,0,.12);min-width:160px;padding:4px 0;display:none}
+.ctx-menu.open{display:block}
+.ctx-item{padding:7px 14px;font-family:var(--fm);font-size:11px;letter-spacing:.04em;color:var(--ink);cursor:pointer;display:flex;align-items:center;gap:8px;white-space:nowrap}
+.ctx-item:hover{background:var(--ink04);color:var(--accent)}
+.ctx-item svg{color:var(--ink60)}
+.cw{position:relative}
+
+
+/* ── DATA AUDIT MODAL ── */
+.audit-overlay{display:none;position:fixed;inset:0;z-index:500;background:rgba(0,0,0,.45);backdrop-filter:blur(3px)}
+.audit-overlay.open{display:flex;align-items:flex-start;justify-content:center;padding:3rem 1rem}
+.audit-modal{background:var(--white);border-radius:6px;box-shadow:0 20px 60px rgba(0,0,0,.2);width:100%;max-width:1100px;max-height:85vh;display:flex;flex-direction:column}
+.audit-header{display:flex;align-items:center;justify-content:space-between;padding:1.1rem 1.5rem;border-bottom:1px solid var(--rule);flex-shrink:0}
+.audit-title{font-family:var(--fd);font-size:15px;font-weight:700;color:var(--ink)}
+.audit-sub{font-family:var(--fm);font-size:10px;color:var(--ink60);margin-top:2px}
+.audit-close{width:28px;height:28px;border-radius:3px;border:1px solid var(--rule);background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--ink60)}
+.audit-close:hover{border-color:var(--neg);color:var(--neg)}
+.audit-toolbar{display:flex;align-items:center;gap:8px;padding:.75rem 1.5rem;border-bottom:1px solid var(--rule);flex-shrink:0;flex-wrap:wrap}
+.audit-search{height:30px;padding:0 10px;border:1px solid var(--rule);border-radius:3px;font-size:12px;font-family:var(--f);outline:none;width:220px;color:var(--ink)}
+.audit-search:focus{border-color:var(--accent)}
+.audit-filter{height:30px;padding:0 10px;border:1px solid var(--rule);border-radius:3px;font-size:11px;font-family:var(--fm);outline:none;color:var(--ink60);background:var(--white);cursor:pointer}
+.audit-count{font-family:var(--fm);font-size:11px;color:var(--ink60);margin-left:auto}
+.audit-dl{height:30px;padding:0 12px;border:1px solid var(--accent);border-radius:3px;background:var(--accent-lt);color:var(--accent);font-family:var(--fm);font-size:10px;letter-spacing:.05em;text-transform:uppercase;cursor:pointer;display:flex;align-items:center;gap:5px}
+.audit-dl:hover{background:var(--accent);color:#fff}
+.audit-body{overflow-y:auto;flex:1}
+.audit-tbl{width:100%;border-collapse:collapse;font-size:12px}
+.audit-tbl th{position:sticky;top:0;background:var(--page);font-family:var(--fm);font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink30);padding:8px 12px;border-bottom:1.5px solid var(--rule);text-align:left;font-weight:500;white-space:nowrap;cursor:pointer;user-select:none}
+.audit-tbl th:hover{color:var(--accent)}
+.audit-tbl th.sort-asc::after{content:' ↑'}
+.audit-tbl th.sort-desc::after{content:' ↓'}
+.audit-tbl td{padding:7px 12px;border-bottom:1px solid var(--rule-lt);color:var(--ink);vertical-align:middle;white-space:nowrap}
+.audit-tbl tr:hover td{background:#f8f7ff}
+.audit-tbl td.num{font-family:var(--fm);text-align:right}
+.audit-tbl td.yr25{color:var(--ink60)}
+.audit-tbl td.yr26{color:var(--accent);font-weight:500}
+.audit-tbl td.chip-cell span{display:inline-block;padding:1px 6px;border-radius:2px;font-family:var(--fm);font-size:10px}
+.audit-empty{padding:3rem;text-align:center;color:var(--ink60);font-size:13px}
+/* audit trigger button on section headers */
+.sh-audit{font-family:var(--fm);font-size:10px;padding:3px 10px;border-radius:2px;border:1px solid var(--rule);background:transparent;color:var(--ink60);cursor:pointer;letter-spacing:.04em;white-space:nowrap;transition:all .12s}
+.sh-audit:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-lt)}
+
+/* ── CATEGORY FILTER BAR ── */
+.cat-filter-bar{background:var(--white);border:1px solid var(--rule);border-radius:4px;padding:.9rem 1.25rem;margin-bottom:1.5rem;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+.cat-filter-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:.65rem}
+.cat-filter-label{font-family:var(--fm);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink60);display:flex;align-items:center;gap:8px}
+.cat-filter-label strong{color:var(--neg);font-weight:600}
+.cat-filter-hint{font-family:var(--fm);font-size:10px;color:var(--ink30)}
+.cat-filter-actions{display:flex;gap:6px}
+.cat-filter-btn{height:24px;padding:0 10px;border-radius:2px;border:1px solid var(--rule);background:transparent;font-family:var(--fm);font-size:10px;letter-spacing:.04em;color:var(--ink60);cursor:pointer;transition:all .12s}
+.cat-filter-btn:hover{border-color:var(--accent);color:var(--accent)}
+.cat-pills{display:flex;flex-wrap:wrap;gap:6px}
+.cat-pill{
+  display:inline-flex;align-items:center;gap:5px;
+  height:28px;padding:0 11px;
+  border-radius:3px;border:1.5px solid var(--rule);
+  background:var(--white);color:var(--ink);
+  font-size:11px;font-weight:500;font-family:var(--f);
+  cursor:pointer;transition:all .15s;user-select:none;
+  white-space:nowrap;
+}
+.cat-pill:hover{border-color:var(--accent);color:var(--accent)}
+.cat-pill .pill-swatch{width:8px;height:8px;border-radius:2px;flex-shrink:0;transition:opacity .15s}
+.cat-pill .pill-amt{font-family:var(--fm);font-size:10px;color:var(--ink60);transition:color .15s}
+.cat-pill.excluded{
+  background:var(--neg-bg);border-color:rgba(192,57,43,.4);color:var(--neg);
+  text-decoration:line-through;opacity:.7;
+}
+.cat-pill.excluded .pill-amt{color:var(--neg);opacity:.7}
+.cat-pill.excluded .pill-swatch{opacity:.35}
+
+
+/* ── EXEC SUMMARY ── */
+.exec-summary{
+  background:linear-gradient(135deg, var(--accent) 0%, #4338ca 100%);
+  border-radius:4px;
+  padding:1.1rem 1.4rem;
+  margin-bottom:1.5rem;
+  color:#fff;
+  position:relative;
+  overflow:hidden;
+}
+.exec-summary::before{
+  content:'';position:absolute;top:-40px;right:-40px;
+  width:160px;height:160px;border-radius:50%;
+  background:rgba(255,255,255,.06);pointer-events:none;
+}
+.exec-summary::after{
+  content:'';position:absolute;bottom:-20px;left:30%;
+  width:120px;height:120px;border-radius:50%;
+  background:rgba(255,255,255,.04);pointer-events:none;
+}
+.exec-summary-head{
+  display:flex;align-items:center;gap:8px;
+  font-family:var(--fm);font-size:9px;letter-spacing:.18em;
+  text-transform:uppercase;color:rgba(255,255,255,.6);
+  margin-bottom:.6rem;
+}
+.exec-summary-head svg{opacity:.7}
+.exec-summary-text{
+  font-family:var(--fd);font-size:14px;font-weight:400;
+  color:#fff;line-height:1.65;
+  position:relative;z-index:1;
+}
+.exec-summary-text strong{font-weight:700;color:#fff}
+.exec-summary-text .e-hi{color:#c7d2fe;font-weight:700}
+.exec-summary-text .e-up{color:#fca5a5;font-weight:700}
+.exec-summary-text .e-dn{color:#bbf7d0;font-weight:700}
+.exec-summary-footer{
+  margin-top:.65rem;padding-top:.65rem;
+  border-top:1px solid rgba(255,255,255,.15);
+  font-family:var(--fm);font-size:10px;
+  color:rgba(255,255,255,.45);
+  display:flex;align-items:center;justify-content:space-between;
+}
+.exec-summary-footer span{display:flex;align-items:center;gap:5px}
+
+
+/* ── TABLE DOWNLOAD BTN ── */
+.tbl-dl-btn{
+  display:inline-flex;align-items:center;gap:5px;
+  height:24px;padding:0 10px;border-radius:2px;
+  border:1px solid var(--rule);background:transparent;
+  font-family:var(--fm);font-size:10px;letter-spacing:.04em;
+  color:var(--ink60);cursor:pointer;white-space:nowrap;
+  transition:all .12s;
+}
+.tbl-dl-btn:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-lt)}
+.tbl-dl-btn svg{flex-shrink:0}
+
+/* ── OBSERVATIONS PANEL ── */
+.obs-panel{background:var(--white);border:1px solid var(--rule);border-radius:4px;padding:.75rem 1.1rem;margin-bottom:1.5rem;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+.obs-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:.5rem}
+.obs-title{font-family:var(--fm);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink60);display:flex;align-items:center;gap:7px}
+.obs-dot{width:7px;height:7px;border-radius:50%;background:var(--accent);flex-shrink:0;animation:obs-pulse 2.5s ease-in-out infinite}
+@keyframes obs-pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.obs-filtered-badge{font-family:var(--fm);font-size:10px;padding:2px 8px;border-radius:2px;background:var(--neg-bg);color:var(--neg);border:1px solid rgba(192,57,43,.25)}
+.obs-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:6px}
+.obs-item{display:flex;align-items:flex-start;gap:8px;padding:8px 10px;background:var(--page);border:1px solid var(--rule-lt);border-radius:4px;font-size:11px;color:var(--ink);line-height:1.45}
+.obs-icon{flex-shrink:0;font-size:14px;line-height:1.45}
+.obs-text strong{font-weight:600;color:var(--ink)}
+.obs-text .hi{color:var(--accent);font-weight:600}
+.obs-text .neg{color:var(--neg);font-weight:600}
+.obs-text .pos{color:var(--pos);font-weight:600}
+.obs-empty{font-family:var(--fm);font-size:11px;color:var(--ink30);padding:.25rem 0}
+
+/* ── CV TILES ── */
+.cv-tile{background:var(--white);border:1px solid var(--rule);border-radius:4px;padding:14px 16px;box-shadow:0 1px 3px rgba(0,0,0,.04);transition:box-shadow .15s}
+.cv-tile:hover{box-shadow:0 2px 10px rgba(91,79,224,.08)}
+.cv-tile-name{font-size:11px;font-weight:600;color:var(--ink);margin-bottom:10px;display:flex;align-items:center;gap:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cv-tile-swatch{width:8px;height:8px;border-radius:2px;flex-shrink:0}
+.cv-tile-row{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px}
+.cv-tile-yr{font-family:var(--fm);font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink30)}
+.cv-tile-amt{font-family:var(--fd);font-size:15px;font-weight:700;color:var(--ink);letter-spacing:-.01em}
+.cv-tile-bar{height:3px;background:var(--rule);border-radius:2px;margin:6px 0 8px}
+.cv-tile-bar-fill{height:3px;border-radius:2px}
+.cv-tile-delta{font-family:var(--fm);font-size:10px;font-weight:600}
+.cv-tile-share{font-family:var(--fm);font-size:10px;color:var(--ink30)}
+
+/* ── PAGE ── */
+.page{max-width:1380px;margin:0 auto;padding:2rem 2rem 5rem}
+
+/* ── PAGE HEADER ── */
+.pg-hdr{display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:1rem;border-bottom:2px solid var(--accent);padding-bottom:1.5rem;margin-bottom:2.25rem}
+.pg-hdr-l{}
+.pg-eye{font-family:var(--fm);font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink60);margin-bottom:.4rem}
+.pg-title{font-family:var(--fd);font-size:32px;font-weight:700;letter-spacing:-.02em;color:var(--ink);line-height:1}
+.pg-title em{font-style:italic;color:var(--accent)}
+.pg-meta{font-size:12px;color:var(--ink60);margin-top:.4rem;font-weight:300}
+.pg-hdr-r{text-align:right}
+.pg-tot-l{font-family:var(--fm);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink60);margin-bottom:.3rem}
+.pg-tot-v{font-family:var(--fd);font-size:40px;font-weight:700;letter-spacing:-.03em;line-height:1;color:var(--ink)}
+.pg-tot-d{font-size:12px;font-weight:300;color:var(--ink60);margin-top:.3rem;display:flex;align-items:center;gap:6px;justify-content:flex-end}
+.dp{font-family:var(--fm);font-size:10px;font-weight:500;padding:2px 7px;border-radius:2px}
+.dp.up{background:var(--neg-bg);color:var(--neg)}.dp.dn{background:var(--pos-bg);color:var(--pos)}.dp.neu{background:var(--ink08);color:var(--ink60)}
+
+/* ── KPI STRIP ── */
+.kpi-strip{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:0;border:1px solid var(--rule);border-radius:4px;overflow:hidden;margin-bottom:2rem}
+.kpi-strip-b{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:0;border:1px solid var(--rule);border-top:none;border-radius:0 0 4px 4px;overflow:hidden;margin-bottom:2.25rem}
+.kpi{padding:1.1rem 1.25rem;background:var(--white);border-right:1px solid var(--rule);position:relative;transition:background .15s}
+.kpi:last-child{border-right:none}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:transparent;transition:background .2s}
+.kpi:hover{background:#f8f7ff}
+.kpi:hover::before{background:var(--accent)}
+.kl{font-family:var(--fm);font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink30);margin-bottom:.5rem}
+.kv{font-family:var(--fd);font-size:22px;font-weight:700;letter-spacing:-.02em;color:var(--ink);line-height:1}
+.kd{font-family:var(--fm);font-size:10px;margin-top:.35rem}
+.kd.up{color:var(--neg)}.kd.dn{color:var(--pos)}.kd.neu{color:var(--ink30)}.kd.warn{color:var(--amb)}
+
+/* ── SECTION ── */
+.sec{margin-bottom:2.5rem}
+.sh{display:flex;align-items:baseline;justify-content:space-between;border-bottom:1px solid var(--rule);padding-bottom:.6rem;margin-bottom:1.25rem}
+.sh-t{font-family:var(--fd);font-size:13px;font-weight:700;letter-spacing:.03em;color:var(--ink)}
+.sh-m{font-family:var(--fm);font-size:10px;letter-spacing:.05em;text-transform:uppercase;color:var(--ink30)}
+
+/* ── CARDS ── */
+.card{background:var(--white);border:1px solid var(--rule);border-radius:4px;padding:1.4rem 1.5rem;box-shadow:0 1px 3px rgba(0,0,0,.04);transition:box-shadow .15s}
+.card:hover{box-shadow:0 2px 10px rgba(91,79,224,.08)}
+.ct{font-family:var(--fd);font-size:12px;font-weight:700;letter-spacing:.03em;color:var(--ink);margin-bottom:1rem;display:flex;align-items:baseline;justify-content:space-between}
+.ct-sub{font-family:var(--fm);font-size:9px;letter-spacing:.05em;color:var(--ink30);font-weight:400}
+.cw{position:relative;width:100%}
+
+/* ── GRIDS ── */
+.g2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1rem}
+.g3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1rem}
+.g4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1rem}
+.g12{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,2fr);gap:1rem}
+.g21{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr);gap:1rem}
+.g13{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,3fr);gap:1rem}
+@media(max-width:860px){.g2,.g3,.g4,.g12,.g21,.g13{grid-template-columns:1fr}}
+
+/* ── LEGEND ── */
+.leg{display:flex;flex-wrap:wrap;gap:12px;margin-bottom:.75rem}
+.li{display:flex;align-items:center;gap:5px;font-family:var(--fm);font-size:10px;color:var(--ink60)}
+.ld{width:8px;height:8px;border-radius:1px;flex-shrink:0}
+
+/* ── STAT ROWS ── */
+.sr{display:flex;align-items:baseline;justify-content:space-between;padding:.6rem 0;border-bottom:1px solid var(--rule-lt)}
+.sr:last-child{border-bottom:none;padding-bottom:0}
+.sr-l{font-size:12px;color:var(--ink60);font-weight:300}
+.sr-v{font-family:var(--fd);font-size:15px;font-weight:700;color:var(--ink)}
+.sr-s{font-family:var(--fm);font-size:10px;color:var(--ink30);margin-left:5px}
+
+/* ── SOURCE LIST ── */
+.src-item{display:flex;align-items:center;gap:10px;padding:.55rem 0;border-bottom:1px solid var(--rule-lt)}
+.src-item:last-child{border-bottom:none}
+.src-sw{width:3px;height:30px;border-radius:2px;flex-shrink:0}
+.src-b{flex:1;min-width:0}
+.src-top{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:2px}
+.src-n{font-size:12px;font-weight:500;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.src-p{font-family:var(--fm);font-size:11px;font-weight:600;color:var(--ink60)}
+.src-a{font-family:var(--fm);font-size:10px;color:var(--ink30)}
+.src-bar{height:2px;background:var(--rule);border-radius:1px;margin-top:3px}
+.src-bf{height:2px;border-radius:1px}
+
+/* ── VENDOR ROWS ── */
+.vr{display:grid;grid-template-columns:22px 150px 1fr 78px 58px;align-items:center;gap:8px;padding:.5rem 4px;border-bottom:1px solid var(--rule-lt);cursor:default;border-radius:3px;position:relative;transition:background .1s}
+.vr:last-child{border-bottom:none}
+.vr:hover{background:var(--ink04)}
+.vr-rank{font-family:var(--fm);font-size:10px;color:var(--ink30);text-align:right}
+.vr-name{font-size:12px;font-weight:500;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.vr-bw{height:4px;background:var(--rule);border-radius:2px;overflow:hidden}
+.vr-bf{height:4px;border-radius:2px;background:var(--accent);opacity:.55}
+.vr-amt{font-family:var(--fd);font-size:12px;font-weight:700;color:var(--ink);text-align:right;white-space:nowrap}
+.vr-d{font-family:var(--fm);font-size:10px;text-align:right;white-space:nowrap}
+.vr-d.pos{color:var(--neg)}.vr-d.neg{color:var(--pos)}
+
+/* ── VENDOR TOOLTIP ── */
+.vtip{display:none;position:absolute;z-index:200;left:calc(100% + 10px);top:50%;transform:translateY(-50%);background:var(--ink);color:#fff;border-radius:4px;padding:.9rem 1rem;min-width:190px;pointer-events:none;box-shadow:0 6px 24px rgba(0,0,0,.22)}
+.vr:hover .vtip{display:block}
+.vtip::before{content:'';position:absolute;left:-5px;top:50%;transform:translateY(-50%);border:5px solid transparent;border-right-color:var(--ink);border-left:none}
+.vtip-n{font-family:var(--fd);font-size:13px;font-weight:700;color:#fff;margin-bottom:.5rem;padding-bottom:.5rem;border-bottom:1px solid rgba(255,255,255,.1)}
+.vtip-amt{font-family:var(--fd);font-size:19px;font-weight:700;color:#fff;margin-bottom:.4rem}
+.vtip-r{display:flex;justify-content:space-between;gap:12px;margin-top:.3rem}
+.vtip-l{font-family:var(--fm);font-size:10px;color:rgba(255,255,255,.4)}
+.vtip-v{font-family:var(--fm);font-size:11px;color:rgba(255,255,255,.82)}
+
+/* ── TABLE ── */
+.tbl{width:100%;border-collapse:collapse}
+.tbl th{font-family:var(--fm);font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink30);padding:0 6px 8px;border-bottom:1.5px solid var(--rule);text-align:left;font-weight:500}
+.tbl th:not(:first-child){text-align:right}
+.tbl td{padding:.7rem 6px;border-bottom:1px solid var(--rule-lt);font-size:12px;color:var(--ink);vertical-align:middle}
+.tbl td:not(:first-child){text-align:right}
+.tbl tr:last-child td{border-bottom:none}
+.tbl tr:hover td{background:var(--ink04)}
+.tbl-bar{height:2px;background:var(--rule);border-radius:1px;margin-top:3px}
+.tbl-bf{height:2px;border-radius:1px;background:var(--accent)}
+
+/* ── CHIPS ── */
+.chip{display:inline-block;font-family:var(--fm);font-size:10px;font-weight:500;padding:2px 7px;border-radius:2px}
+.chip.pos{background:var(--neg-bg);color:var(--neg)}.chip.neg{background:var(--pos-bg);color:var(--pos)}.chip.neu{background:var(--ink08);color:var(--ink60)}.chip.warn{background:var(--amb-bg);color:var(--amb)}
+
+/* ── RISK BAND ── */
+.risk-band{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:0;border:1px solid var(--rule);border-radius:4px;overflow:hidden;margin-bottom:1.25rem}
+.rb{padding:1.1rem 1.25rem;background:var(--white);border-right:1px solid var(--rule)}
+.rb:last-child{border-right:none}
+.rb-l{font-family:var(--fm);font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink30);margin-bottom:.4rem}
+.rb-v{font-family:var(--fd);font-size:24px;font-weight:700;letter-spacing:-.02em;line-height:1}
+.rb-s{font-family:var(--fm);font-size:10px;margin-top:.3rem}
+
+/* ── STATUS LIST ── */
+.srow{display:flex;align-items:center;gap:7px}
+.sdot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.sl{font-size:12px;color:var(--ink60);font-weight:300;flex:1}
+.sv{font-family:var(--fd);font-size:13px;font-weight:700;color:var(--ink)}
+.sp{font-family:var(--fm);font-size:10px;color:var(--ink30);margin-left:3px}
+
+/* ── VENDOR CONC BARS ── */
+.vc-row{margin-bottom:9px}
+.vc-top{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:3px}
+.vc-name{font-size:12px;font-weight:500;color:var(--ink)}
+.vc-pct{font-family:var(--fm);font-size:11px;font-weight:700;color:var(--accent)}
+.vc-mid{display:flex;align-items:center;gap:8px}
+.vc-track{flex:1;height:5px;background:var(--rule);border-radius:3px;overflow:hidden}
+.vc-fill{height:5px;border-radius:3px}
+.vc-amt{font-family:var(--fm);font-size:10px;color:var(--ink60);white-space:nowrap;width:80px;text-align:right}
+
+/* ── TOAST ── */
+.toast{position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%) translateY(60px);background:var(--ink);color:#fff;font-family:var(--fm);font-size:11px;letter-spacing:.04em;padding:9px 18px;border-radius:3px;opacity:0;transition:opacity .2s,transform .2s;z-index:9999;white-space:nowrap;pointer-events:none}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.toast.err{background:var(--neg)}.toast.ok{background:var(--pos)}
+
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--rule);border-radius:2px}
+@media print{.topbar,#login,.tbtn{display:none}.page{padding:1rem}}
+</style>
+</head>
+<body>
+<div id="login">
+  <div class="lc">
+    <div style="margin-bottom:1.5rem;display:flex;justify-content:center">
+      <img id="login-logo-img" alt="Niural AI" style="height:72px;width:auto;object-fit:contain">
+    </div>
+    <div class="l-h" style="text-align:center">Niural<br>Spend Insights</div>
+    <div class="l-s">Sign in to access your expense dashboard</div>
+    <div class="lf"><label>Username</label><input type="text" id="lu" placeholder="Username" autocomplete="username"></div>
+    <div class="lf"><label>Password</label><input type="password" id="lp" placeholder="Password" autocomplete="current-password"></div>
+    <button class="lbtn" id="lbtn">Access Dashboard</button>
+    <div class="lerr" id="lerr">Incorrect username or password.</div>
+  </div>
+</div>
+
+<!-- ── APP ───────────────────────────────────────── -->
+<div id="app">
+<div class="topbar">
+  <div class="tb-l">
+    <img class="tb-logo" id="tb-img" alt="Niural AI" style="height:28px;width:auto;object-fit:contain">
+    <div class="tb-div"></div>
+    <div class="tb-title">Expense Intelligence</div>
+  </div>
+  <div class="tb-r">
+    <span class="badge" id="tb-badge" style="display:none"></span>
+    <div class="uwrap">
+      <button class="tbtn up">
+        <svg width="11" height="11" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M10 13V4M6 7l4-4 4 4"/><path d="M3 14v2a1 1 0 001 1h12a1 1 0 001-1v-2"/></svg>
+        Upload CSV / Excel
+      </button>
+      <input type="file" accept=".csv,.xlsx,.xls" id="fi">
+    </div>
+    <button class="tbtn" id="dl-all-btn" style="display:none" title="Download full dataset as CSV">
+      <svg width="11" height="11" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M10 4v9m-4-4l4 4 4-4"/><path d="M3 16v1a1 1 0 001 1h12a1 1 0 001-1v-1"/></svg>
+      Download Data
+    </button>
+    <button class="tbtn" id="reset-btn" style="display:none">Reset</button>
+    <button class="tbtn" id="lout">Sign Out</button>
+  </div>
+</div>
+
+<div class="page">
+
+<!-- PAGE HEADER -->
+<div class="pg-hdr">
+  <div class="pg-hdr-l">
+    <div class="pg-eye">Expense Summary &nbsp;·&nbsp; <span id="ph-period">2025 – 2026</span></div>
+    <div class="pg-title">Spend &amp; <em>Expense</em> Overview</div>
+    <div class="pg-meta" id="ph-meta">Paid Year &amp; Month · 2025 vs 2026 · USD Amount</div>
+  </div>
+  <div class="pg-hdr-r">
+    <div class="pg-tot-l">2026 Spend to Date</div>
+    <div class="pg-tot-v" id="ph-tot25">—</div>
+    <div class="pg-tot-d"><span class="dp neu" id="ph-dp">—</span><span style="font-size:12px;font-weight:300">vs 2025 YTD</span></div>
+  </div>
+</div>
+
+<!-- CATEGORY FILTER BAR -->
+<div class="cat-filter-bar" id="cat-filter-bar">
+  <div class="cat-filter-top">
+    <div class="cat-filter-label">
+      <svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 6h14M6 10h8M9 14h2"/></svg>
+      Filter by Category
+      <span id="cat-filter-active-count" style="display:none"> · <strong id="cat-filter-n">0</strong> excluded</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px">
+      <span class="cat-filter-hint">Click any category to exclude it from the entire dashboard</span>
+      <div class="cat-filter-actions">
+        <button class="cat-filter-btn" onclick="catFilterSelectAll()">Include All</button>
+        <button class="cat-filter-btn" onclick="catFilterClearAll()">Exclude All</button>
+      </div>
+    </div>
+  </div>
+  <div class="cat-pills" id="cat-pills"></div>
+</div>
+
+<!-- EXEC SUMMARY -->
+<div class="exec-summary" id="exec-summary" style="display:none">
+  <div class="exec-summary-head">
+    <svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2"/></svg>
+    Executive Summary
+    <span id="exec-filtered-tag" style="display:none;background:rgba(255,255,255,.15);padding:1px 7px;border-radius:2px;font-size:9px">FILTERED</span>
+  </div>
+  <div class="exec-summary-text" id="exec-text">—</div>
+  <div class="exec-summary-footer">
+    <span>
+      <svg width="11" height="11" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="10" cy="10" r="8"/><path d="M10 6v4l3 2"/></svg>
+      <span id="exec-timestamp">—</span>
+    </span>
+    <span id="exec-scope">Based on full dataset</span>
+  </div>
+</div>
+
+<!-- OBSERVATIONS PANEL -->
+<div class="obs-panel" id="obs-panel">
+  <div class="obs-header">
+    <div class="obs-title">
+      <div class="obs-dot"></div>
+      Spend Observations
+    </div>
+    <span id="obs-filtered-badge" class="obs-filtered-badge" style="display:none">Filtered view</span>
+  </div>
+  <div class="obs-list" id="obs-list">
+    <div class="obs-empty">Loading observations…</div>
+  </div>
+</div>
+
+<!-- KPI ROW 1 -->
+<div class="kpi-strip">
+  <div class="kpi" style="border-top:3px solid var(--accent)"><div class="kl">2026 YTD Spend</div><div class="kv" id="kv-26t">—</div><div class="kd neu" id="kd-26t">Jan–Mar 2026</div></div>
+  <div class="kpi"><div class="kl">2025 Full Year</div><div class="kv" id="kv-25t">—</div><div class="kd neu" id="kd-25t">Full year</div></div>
+  <div class="kpi"><div class="kl">2026 vs 2025 YTD</div><div class="kv" id="kv-yoy">—</div><div class="kd neu" id="kd-yoy">Same period</div></div>
+  <div class="kpi"><div class="kl">Avg Monthly 2025</div><div class="kv" id="kv-avg25">—</div><div class="kd neu" id="kd-avg25">Per active month</div></div>
+  <div class="kpi"><div class="kl">Avg Monthly 2026</div><div class="kv" id="kv-avg26">—</div><div class="kd neu" id="kd-avg26">Per active month</div></div>
+</div>
+<!-- KPI ROW 2 -->
+<div class="kpi-strip-b">
+  <div class="kpi"><div class="kl">Invoices 2025</div><div class="kv" id="kv-inv25">—</div><div class="kd neu" id="kd-inv25">—</div></div>
+  <div class="kpi"><div class="kl">Invoices 2026</div><div class="kv" id="kv-inv26">—</div><div class="kd neu" id="kd-inv26">YTD</div></div>
+  <div class="kpi"><div class="kl">Unique Vendors</div><div class="kv" id="kv-vend">—</div><div class="kd neu" id="kd-vend">—</div></div>
+  <div class="kpi"><div class="kl">Categories</div><div class="kv" id="kv-cats">—</div><div class="kd neu">Summarized mapping</div></div>
+  <div class="kpi"><div class="kl">Top Source</div><div class="kv" id="kv-src">—</div><div class="kd neu" id="kd-src">—</div></div>
+</div>
+
+<!-- ── SECTION 1: MONTHLY TRENDS ── -->
+<div class="sec">
+  <div class="sh"><div class="sh-t">Monthly Spend Trends</div><button class="sh-audit" onclick="openAudit('Monthly Spend Trends',null)">Audit Data</button><div class="sh-m">2025 &amp; 2026 by month · USD Amount</div></div>
+  <div class="g12" style="margin-bottom:1rem;align-items:start">
+    <!-- Stats panel -->
+    <div style="display:flex;flex-direction:column;gap:1rem">
+      <div class="card">
+        <div class="ct">Year Summary <span class="ct-sub">2025 vs 2026 YTD</span></div>
+        <div id="yr-stats"></div>
+      </div>
+      <div class="card">
+        <div class="ct">Cumulative YTD <span class="ct-sub">Running total</span></div>
+        <div class="leg"><div class="li"><span class="ld" style="background:var(--accent)"></span>2026</div><div class="li"><span class="ld" style="background:rgba(0,0,0,.18)"></span>2025 same period</div></div>
+        <div class="cw" style="height:185px"><button class="chart-menu-btn" onclick="showCtxMenu(this,'c-ytd','Ytd')" title="Download chart data">
+        <svg width="11" height="11" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="10" cy="10" r="1.5"/><circle cx="10" cy="4" r="1.5"/><circle cx="10" cy="16" r="1.5"/></svg>
+      </button>
+      <div class="ctx-menu" id="menu-c-ytd">
+        <div class="ctx-item" onclick="dlChartCSV('c-ytd','Ytd')"><svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M10 4v9m-4-4l4 4 4-4"/><path d="M3 16v1a1 1 0 001 1h12a1 1 0 001-1v-1"/></svg>Download CSV</div>
+        <div class="ctx-item" onclick="dlChartPNG('c-ytd','Ytd')"><svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="3" width="16" height="14" rx="2"/><path d="M2 13l4-4 4 4 4-5 4 5"/></svg>Download PNG</div>
+              <div class="ctx-item" onclick="openAudit('Ytd','c-ytd')"><svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>Audit Data</div>
+      </div>
+      <canvas id="c-ytd"></canvas></div>
+      </div>
+    </div>
+    <!-- Main trend chart -->
+    <div class="card">
+      <div class="ct">Monthly Spend — 2025 &amp; 2026 Side by Side <span class="ct-sub">USD Amount by month</span></div>
+      <div class="leg"><div class="li"><span class="ld" style="background:var(--accent)"></span>2026</div><div class="li"><span class="ld" style="background:rgba(0,0,0,.18)"></span>2025</div></div>
+      <div class="cw" style="height:320px"><button class="chart-menu-btn" onclick="showCtxMenu(this,'c-trend','Trend')" title="Download chart data">
+        <svg width="11" height="11" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="10" cy="10" r="1.5"/><circle cx="10" cy="4" r="1.5"/><circle cx="10" cy="16" r="1.5"/></svg>
+      </button>
+      <div class="ctx-menu" id="menu-c-trend">
+        <div class="ctx-item" onclick="dlChartCSV('c-trend','Trend')"><svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M10 4v9m-4-4l4 4 4-4"/><path d="M3 16v1a1 1 0 001 1h12a1 1 0 001-1v-1"/></svg>Download CSV</div>
+        <div class="ctx-item" onclick="dlChartPNG('c-trend','Trend')"><svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="3" width="16" height="14" rx="2"/><path d="M2 13l4-4 4 4 4-5 4 5"/></svg>Download PNG</div>
+              <div class="ctx-item" onclick="openAudit('Trend','c-trend')"><svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>Audit Data</div>
+      </div>
+      <canvas id="c-trend"></canvas></div>
+    </div>
+  </div>
+  <!-- MoM change + source trend -->
+  <div class="g2">
+    <div class="card">
+      <div class="ct">Month-over-Month Change <span class="ct-sub">2025 sequential · %</span></div>
+      <div class="cw" style="height:200px"><button class="chart-menu-btn" onclick="showCtxMenu(this,'c-mom','Mom')" title="Download chart data">
+        <svg width="11" height="11" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="10" cy="10" r="1.5"/><circle cx="10" cy="4" r="1.5"/><circle cx="10" cy="16" r="1.5"/></svg>
+      </button>
+      <div class="ctx-menu" id="menu-c-mom">
+        <div class="ctx-item" onclick="dlChartCSV('c-mom','Mom')"><svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M10 4v9m-4-4l4 4 4-4"/><path d="M3 16v1a1 1 0 001 1h12a1 1 0 001-1v-1"/></svg>Download CSV</div>
+        <div class="ctx-item" onclick="dlChartPNG('c-mom','Mom')"><svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="3" width="16" height="14" rx="2"/><path d="M2 13l4-4 4 4 4-5 4 5"/></svg>Download PNG</div>
+              <div class="ctx-item" onclick="openAudit('Mom','c-mom')"><svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>Audit Data</div>
+      </div>
+      <canvas id="c-mom"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="ct">Spend by Source — Monthly <span class="ct-sub">2025 &amp; 2026</span></div>
+      <div class="leg" id="src-trend-leg"></div>
+      <div class="cw" style="height:200px"><button class="chart-menu-btn" onclick="showCtxMenu(this,'c-src-trend','Srtrend')" title="Download chart data">
+        <svg width="11" height="11" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="10" cy="10" r="1.5"/><circle cx="10" cy="4" r="1.5"/><circle cx="10" cy="16" r="1.5"/></svg>
+      </button>
+      <div class="ctx-menu" id="menu-c-src-trend">
+        <div class="ctx-item" onclick="dlChartCSV('c-src-trend','Srtrend')"><svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M10 4v9m-4-4l4 4 4-4"/><path d="M3 16v1a1 1 0 001 1h12a1 1 0 001-1v-1"/></svg>Download CSV</div>
+        <div class="ctx-item" onclick="dlChartPNG('c-src-trend','Srtrend')"><svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="3" width="16" height="14" rx="2"/><path d="M2 13l4-4 4 4 4-5 4 5"/></svg>Download PNG</div>
+              <div class="ctx-item" onclick="openAudit('Srtrend','c-src-trend')"><svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>Audit Data</div>
+      </div>
+      <canvas id="c-src-trend"></canvas></div>
+    </div>
+  </div>
+</div>
+
+<!-- ── SECTION 2: PAYMENT SOURCES ── -->
+<div class="sec">
+  <div class="sh"><div class="sh-t">Payment Sources</div><button class="sh-audit" onclick="openAudit('Payment Sources',null)">Audit Data</button><div class="sh-m">Channel distribution · USD Amount</div></div>
+  <div class="g3">
+    <div class="card">
+      <div class="ct">2025 Distribution</div>
+      <div id="src-list-25"></div>
+    </div>
+    <div class="card">
+      <div class="ct">2026 YTD Distribution</div>
+      <div id="src-list-26"></div>
+    </div>
+    <div class="card">
+      <div class="ct">Source Mix Shift <span class="ct-sub">2025 → 2026 change</span></div>
+      <div class="cw" style="height:240px"><button class="chart-menu-btn" onclick="showCtxMenu(this,'c-src-shift','Srshift')" title="Download chart data">
+        <svg width="11" height="11" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="10" cy="10" r="1.5"/><circle cx="10" cy="4" r="1.5"/><circle cx="10" cy="16" r="1.5"/></svg>
+      </button>
+      <div class="ctx-menu" id="menu-c-src-shift">
+        <div class="ctx-item" onclick="dlChartCSV('c-src-shift','Srshift')"><svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M10 4v9m-4-4l4 4 4-4"/><path d="M3 16v1a1 1 0 001 1h12a1 1 0 001-1v-1"/></svg>Download CSV</div>
+        <div class="ctx-item" onclick="dlChartPNG('c-src-shift','Srshift')"><svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="3" width="16" height="14" rx="2"/><path d="M2 13l4-4 4 4 4-5 4 5"/></svg>Download PNG</div>
+              <div class="ctx-item" onclick="openAudit('Srshift','c-src-shift')"><svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>Audit Data</div>
+      </div>
+      <canvas id="c-src-shift"></canvas></div>
+    </div>
+  </div>
+</div>
+
+<!-- ── SECTION 3: CATEGORY & VENDOR ── -->
+<div class="sec">
+  <div class="sh"><div class="sh-t">Category &amp; Vendor Analysis</div><button class="sh-audit" onclick="openAudit('Category & Vendor',null)">Audit Data</button><div class="sh-m">Summarized mapping · Top vendors by USD</div></div>
+
+  <div class="g21" style="margin-bottom:1rem">
+    <div class="card">
+      <div class="ct">Top Categories — 2025 vs 2026 YTD <span class="ct-sub">USD · grouped</span></div>
+      <div class="leg"><div class="li"><span class="ld" style="background:var(--accent)"></span>2026</div><div class="li"><span class="ld" style="background:rgba(0,0,0,.15)"></span>2025</div></div>
+      <div class="cw" style="height:340px"><button class="chart-menu-btn" onclick="showCtxMenu(this,'c-cat','Cat')" title="Download chart data">
+        <svg width="11" height="11" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="10" cy="10" r="1.5"/><circle cx="10" cy="4" r="1.5"/><circle cx="10" cy="16" r="1.5"/></svg>
+      </button>
+      <div class="ctx-menu" id="menu-c-cat">
+        <div class="ctx-item" onclick="dlChartCSV('c-cat','Cat')"><svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M10 4v9m-4-4l4 4 4-4"/><path d="M3 16v1a1 1 0 001 1h12a1 1 0 001-1v-1"/></svg>Download CSV</div>
+        <div class="ctx-item" onclick="dlChartPNG('c-cat','Cat')"><svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="3" width="16" height="14" rx="2"/><path d="M2 13l4-4 4 4 4-5 4 5"/></svg>Download PNG</div>
+              <div class="ctx-item" onclick="openAudit('Cat','c-cat')"><svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>Audit Data</div>
+      </div>
+      <canvas id="c-cat"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="ct">Category YoY Growth <span class="ct-sub">% change vs 2025</span></div>
+      <div class="cw" style="height:340px"><button class="chart-menu-btn" onclick="showCtxMenu(this,'c-cat-yoy','Cat Yoy')" title="Download chart data">
+        <svg width="11" height="11" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="10" cy="10" r="1.5"/><circle cx="10" cy="4" r="1.5"/><circle cx="10" cy="16" r="1.5"/></svg>
+      </button>
+      <div class="ctx-menu" id="menu-c-cat-yoy">
+        <div class="ctx-item" onclick="dlChartCSV('c-cat-yoy','Cat Yoy')"><svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M10 4v9m-4-4l4 4 4-4"/><path d="M3 16v1a1 1 0 001 1h12a1 1 0 001-1v-1"/></svg>Download CSV</div>
+        <div class="ctx-item" onclick="dlChartPNG('c-cat-yoy','Cat Yoy')"><svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="3" width="16" height="14" rx="2"/><path d="M2 13l4-4 4 4 4-5 4 5"/></svg>Download PNG</div>
+              <div class="ctx-item" onclick="openAudit('Cat Yoy','c-cat-yoy')"><svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>Audit Data</div>
+      </div>
+      <canvas id="c-cat-yoy"></canvas></div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-bottom:1rem">
+    <div class="ct">Category Detail <span class="ct-sub">Summarized Mapping · USD only</span><button class="tbl-dl-btn" onclick="dlTableCSV('cat-tbody','Category_Detail')"><svg width="11" height="11" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M10 4v9m-4-4l4 4 4-4"/><path d="M3 16v1a1 1 0 001 1h12a1 1 0 001-1v-1"/></svg>Download</button></div>
+    <table class="tbl">
+      <thead><tr><th>#</th><th>Category</th><th style="text-align:right">2026 YTD</th><th style="text-align:right">2025</th><th style="text-align:right">YoY Δ</th><th style="text-align:right">Share</th><th style="text-align:right">Invoices</th><th style="text-align:right">Avg/Invoice</th></tr></thead>
+      <tbody id="cat-tbody"></tbody>
+    </table>
+  </div>
+
+  <div class="g21">
+    <div class="card">
+      <div class="ct">Top 20 Vendors — hover for detail <span class="ct-sub">2025 USD · vs 2026 YTD</span></div>
+      <div id="vbar-list"></div>
+    </div>
+    <div class="card">
+      <div class="ct">Vendor Concentration — Pareto <span class="ct-sub">Cumulative % of 2025 spend</span></div>
+      <div class="cw" style="height:260px"><button class="chart-menu-btn" onclick="showCtxMenu(this,'c-pareto','Pareto')" title="Download chart data">
+        <svg width="11" height="11" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="10" cy="10" r="1.5"/><circle cx="10" cy="4" r="1.5"/><circle cx="10" cy="16" r="1.5"/></svg>
+      </button>
+      <div class="ctx-menu" id="menu-c-pareto">
+        <div class="ctx-item" onclick="dlChartCSV('c-pareto','Pareto')"><svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M10 4v9m-4-4l4 4 4-4"/><path d="M3 16v1a1 1 0 001 1h12a1 1 0 001-1v-1"/></svg>Download CSV</div>
+        <div class="ctx-item" onclick="dlChartPNG('c-pareto','Pareto')"><svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="3" width="16" height="14" rx="2"/><path d="M2 13l4-4 4 4 4-5 4 5"/></svg>Download PNG</div>
+              <div class="ctx-item" onclick="openAudit('Pareto','c-pareto')"><svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>Audit Data</div>
+      </div>
+      <canvas id="c-pareto"></canvas></div>
+      <div style="margin-top:1rem" id="vc-detail"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ── SECTION 4: OVI'S CUSTOM VIEW ── -->
+<div class="sec">
+  <div class="sh"><div class="sh-t">Ovi's Custom View</div><button class="sh-audit" onclick="openAudit(&quot;Ovi's Custom View&quot;,null)">Audit Data</button><div class="sh-m">Spend by custom view label · USD</div></div>
+
+  <!-- Full-width vertical grouped bar chart -->
+  <div class="card" style="margin-bottom:1rem">
+    <div class="ct">
+      2025 vs 2026 YTD by Custom View
+      <div style="display:flex;align-items:center;gap:16px">
+        <div class="leg" style="margin-bottom:0">
+          <div class="li"><span class="ld" style="background:rgba(0,0,0,.18)"></span>2025</div>
+          <div class="li"><span class="ld" style="background:var(--accent)"></span>2026 YTD</div>
+        </div>
+        <span class="ct-sub">USD Amount · hover for detail</span>
+      </div>
+    </div>
+    <div class="cw" style="height:300px"><button class="chart-menu-btn" onclick="showCtxMenu(this,'c-cv','Custom View')" title="Download chart data">
+      <svg width="11" height="11" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="10" cy="10" r="1.5"/><circle cx="10" cy="4" r="1.5"/><circle cx="10" cy="16" r="1.5"/></svg>
+    </button>
+    <div class="ctx-menu" id="menu-c-cv">
+      <div class="ctx-item" onclick="dlChartCSV('c-cv','Custom View')"><svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M10 4v9m-4-4l4 4 4-4"/><path d="M3 16v1a1 1 0 001 1h12a1 1 0 001-1v-1"/></svg>Download CSV</div>
+      <div class="ctx-item" onclick="dlChartPNG('c-cv','Custom View')"><svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="3" width="16" height="14" rx="2"/><path d="M2 13l4-4 4 4 4-5 4 5"/></svg>Download PNG</div>
+      <div class="ctx-item" onclick="openAudit(&quot;Ovi's Custom View&quot;,'c-cv')"><svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>Audit Data</div>
+    </div>
+    <canvas id="c-cv"></canvas></div>
+  </div>
+
+  <!-- Stat tiles row — one per custom view -->
+  <div id="cv-tiles" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:.75rem"></div>
+</div>
+
+<!-- ── SECTION 5: CATEGORY BREAKDOWN (Filter Buckets) ── -->
+<div class="sec">
+  <div class="sh">
+    <div class="sh-t">Category Breakdown</div>
+    <button class="sh-audit" onclick="openAudit('Category Breakdown',null)">Audit Data</button>
+    <div class="sh-m">All top 10 filter categories · 2025 &amp; 2026 · USD Amount</div>
+  </div>
+
+  <!-- Full-width bar + donut -->
+  <div class="g21" style="margin-bottom:1rem">
+    <div class="card">
+      <div class="ct">
+        Total Spend by Category
+        <div style="display:flex;align-items:center;gap:14px">
+          <div class="leg" style="margin-bottom:0">
+            <div class="li"><span class="ld" style="background:rgba(0,0,0,.15)"></span>2025</div>
+            <div class="li"><span class="ld" style="background:var(--accent)"></span>2026 YTD</div>
+          </div>
+          <span class="ct-sub">USD · hover for $</span>
+        </div>
+      </div>
+      <div class="cw" style="height:340px">
+        <button class="chart-menu-btn" onclick="showCtxMenu(this,'c-catbucket','Category Breakdown')" title="Options">
+          <svg width="11" height="11" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="10" cy="10" r="1.5"/><circle cx="10" cy="4" r="1.5"/><circle cx="10" cy="16" r="1.5"/></svg>
+        </button>
+        <div class="ctx-menu" id="menu-c-catbucket">
+          <div class="ctx-item" onclick="dlChartCSV('c-catbucket','Category Breakdown')"><svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M10 4v9m-4-4l4 4 4-4"/><path d="M3 16v1a1 1 0 001 1h12a1 1 0 001-1v-1"/></svg>Download CSV</div>
+          <div class="ctx-item" onclick="dlChartPNG('c-catbucket','Category Breakdown')"><svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="3" width="16" height="14" rx="2"/><path d="M2 13l4-4 4 4 4-5 4 5"/></svg>Download PNG</div>
+          <div class="ctx-item" onclick="openAudit('Category Breakdown','c-catbucket')"><svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>Audit Data</div>
+        </div>
+        <canvas id="c-catbucket"></canvas>
+      </div>
+    </div>
+    <div class="card">
+      <div class="ct">Share of Wallet <span class="ct-sub">2025 vs 2026 YTD · Full year · Same period</span></div>
+      <div class="cw" style="height:280px">
+        <button class="chart-menu-btn" onclick="showCtxMenu(this,'c-catdonut','Category Share')" title="Options">
+          <svg width="11" height="11" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="10" cy="10" r="1.5"/><circle cx="10" cy="4" r="1.5"/><circle cx="10" cy="16" r="1.5"/></svg>
+        </button>
+        <div class="ctx-menu" id="menu-c-catdonut">
+          <div class="ctx-item" onclick="dlChartCSV('c-catdonut','Category Share')"><svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M10 4v9m-4-4l4 4 4-4"/><path d="M3 16v1a1 1 0 001 1h12a1 1 0 001-1v-1"/></svg>Download CSV</div>
+          <div class="ctx-item" onclick="dlChartPNG('c-catdonut','Category Share')"><svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="3" width="16" height="14" rx="2"/><path d="M2 13l4-4 4 4 4-5 4 5"/></svg>Download PNG</div>
+        </div>
+        <canvas id="c-catdonut"></canvas>
+      </div>
+      <!-- Donut legend -->
+      <div id="catbucket-legend" style="margin-top:.75rem;display:flex;flex-direction:column;gap:4px;overflow-y:auto;max-height:140px"></div>
+    </div>
+  </div>
+
+  <!-- Detail table: one row per category with both years + delta + bar -->
+  <div class="card">
+    <div class="ct">Category Detail — All Filter Buckets <span class="ct-sub">USD Amount · 2025 &amp; 2026 YTD · vs same period</span><button class="tbl-dl-btn" onclick="dlTableCSV('catbucket-tbl','Category_Breakdown')"><svg width="11" height="11" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M10 4v9m-4-4l4 4 4-4"/><path d="M3 16v1a1 1 0 001 1h12a1 1 0 001-1v-1"/></svg>Download</button></div>
+
+  <!-- Monthly spend chart + table — Jan 2025 through Apr 2026 -->
+  <div class="card" style="margin-top:1rem">
+    <div class="ct">
+      Monthly Spend by Category — Jan 2025 through Apr 2026
+      <div style="display:flex;align-items:center;gap:10px">
+        <button class="tbl-dl-btn" onclick="dlTableCSV('catmonth-tbl','Category_Monthly_Spend')">
+          <svg width="11" height="11" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M10 4v9m-4-4l4 4 4-4"/><path d="M3 16v1a1 1 0 001 1h12a1 1 0 001-1v-1"/></svg>Download
+        </button>
+        <span class="ct-sub">USD Amount · all filter buckets</span>
+      </div>
+    </div>
+    <div class="cw" style="height:320px">
+      <button class="chart-menu-btn" onclick="showCtxMenu(this,'c-catmonth','Category Monthly')" title="Options">
+        <svg width="11" height="11" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="10" cy="10" r="1.5"/><circle cx="10" cy="4" r="1.5"/><circle cx="10" cy="16" r="1.5"/></svg>
+      </button>
+      <div class="ctx-menu" id="menu-c-catmonth">
+        <div class="ctx-item" onclick="dlChartCSV('c-catmonth','Category Monthly')"><svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M10 4v9m-4-4l4 4 4-4"/><path d="M3 16v1a1 1 0 001 1h12a1 1 0 001-1v-1"/></svg>Download CSV</div>
+        <div class="ctx-item" onclick="dlChartPNG('c-catmonth','Category Monthly')"><svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="3" width="16" height="14" rx="2"/><path d="M2 13l4-4 4 4 4-5 4 5"/></svg>Download PNG</div>
+      </div>
+      <canvas id="c-catmonth"></canvas>
+    </div>
+  </div>
+
+  <!-- Monthly spend table -->
+  <div class="card" style="margin-top:1rem;overflow-x:auto">
+    <div class="ct">
+      Monthly Spend Detail — All Filter Buckets
+      <button class="tbl-dl-btn" onclick="dlTableCSV('catmonth-tbl','Category_Monthly_Detail')">
+        <svg width="11" height="11" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M10 4v9m-4-4l4 4 4-4"/><path d="M3 16v1a1 1 0 001 1h12a1 1 0 001-1v-1"/></svg>Download
+      </button>
+    </div>
+    <table class="tbl" id="catmonth-tbl">
+      <thead id="catmonth-thead"></thead>
+      <tbody id="catmonth-tbody"></tbody>
+      <tfoot id="catmonth-tfoot"></tfoot>
+    </table>
+  </div>
+
+    <table class="tbl" id="catbucket-tbl">
+      <thead>
+        <tr>
+          <th></th>
+          <th>Category</th>
+          <th style="text-align:right">2026 YTD</th>
+          <th style="text-align:right">2025</th>
+          <th style="text-align:right">YoY Δ</th>
+          <th style="text-align:right">Share of Total</th>
+          <th style="min-width:120px">Spend Bar</th>
+        </tr>
+      </thead>
+      <tbody id="catbucket-tbody"></tbody>
+      <tfoot id="catbucket-tfoot"></tfoot>
+    </table>
+  </div>
+</div>
+
+<!-- ── SECTION 6: KPI ANALYTICS ── -->
+<div class="sec">
+  <div class="sh"><div class="sh-t">KPI Analytics</div><button class="sh-audit" onclick="openAudit('KPI Analytics',null)">Audit Data</button><div class="sh-m">Efficiency · Risk · Performance · 2025 &amp; 2026</div></div>
+  <div class="risk-band">
+    <div class="rb"><div class="rb-l">Top 5 Vendor Conc.</div><div class="rb-v" id="rb-conc">—</div><div class="rb-s" id="rb-conc-s">—</div></div>
+    <div class="rb"><div class="rb-l">Avg Days to Pay</div><div class="rb-v" id="rb-days">—</div><div class="rb-s" id="rb-days-s">—</div></div>
+    <div class="rb"><div class="rb-l">FX Exposure</div><div class="rb-v" id="rb-fx">—</div><div class="rb-s" id="rb-fx-s">—</div></div>
+    <div class="rb"><div class="rb-l">Invoices Active<br><span style="font-family:var(--fm);font-size:9px;font-weight:400;color:rgba(0,0,0,.35);letter-spacing:.04em">excl. void / rejected / declined</span></div><div class="rb-v" id="rb-paid">—</div><div class="rb-s" id="rb-paid-s">—</div></div>
+  </div>
+  <div class="g3" style="margin-bottom:1rem">
+    <div class="card">
+      <div class="ct">Cost per Invoice <span class="ct-sub">Avg USD · Monthly 2025</span></div>
+      <div class="cw" style="height:160px"><button class="chart-menu-btn" onclick="showCtxMenu(this,'c-cpi','Cpi')" title="Download chart data">
+        <svg width="11" height="11" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="10" cy="10" r="1.5"/><circle cx="10" cy="4" r="1.5"/><circle cx="10" cy="16" r="1.5"/></svg>
+      </button>
+      <div class="ctx-menu" id="menu-c-cpi">
+        <div class="ctx-item" onclick="dlChartCSV('c-cpi','Cpi')"><svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M10 4v9m-4-4l4 4 4-4"/><path d="M3 16v1a1 1 0 001 1h12a1 1 0 001-1v-1"/></svg>Download CSV</div>
+        <div class="ctx-item" onclick="dlChartPNG('c-cpi','Cpi')"><svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="3" width="16" height="14" rx="2"/><path d="M2 13l4-4 4 4 4-5 4 5"/></svg>Download PNG</div>
+              <div class="ctx-item" onclick="openAudit('Cpi','c-cpi')"><svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>Audit Data</div>
+      </div>
+      <canvas id="c-cpi"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="ct">Invoice Count vs Spend <span class="ct-sub">Volume &amp; value · 2025</span></div>
+      <div class="leg"><div class="li"><span class="ld" style="background:var(--accent)"></span>Spend $K</div><div class="li"><span class="ld" style="background:var(--amb)"></span>Invoice count</div></div>
+      <div class="cw" style="height:160px"><button class="chart-menu-btn" onclick="showCtxMenu(this,'c-inv-spend','Inv Spend')" title="Download chart data">
+        <svg width="11" height="11" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="10" cy="10" r="1.5"/><circle cx="10" cy="4" r="1.5"/><circle cx="10" cy="16" r="1.5"/></svg>
+      </button>
+      <div class="ctx-menu" id="menu-c-inv-spend">
+        <div class="ctx-item" onclick="dlChartCSV('c-inv-spend','Inv Spend')"><svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M10 4v9m-4-4l4 4 4-4"/><path d="M3 16v1a1 1 0 001 1h12a1 1 0 001-1v-1"/></svg>Download CSV</div>
+        <div class="ctx-item" onclick="dlChartPNG('c-inv-spend','Inv Spend')"><svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="3" width="16" height="14" rx="2"/><path d="M2 13l4-4 4 4 4-5 4 5"/></svg>Download PNG</div>
+              <div class="ctx-item" onclick="openAudit('Inv Spend','c-inv-spend')"><svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>Audit Data</div>
+      </div>
+      <canvas id="c-inv-spend"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="ct">Invoice Status <span class="ct-sub">All records · count by status</span></div>
+      <div style="display:flex;gap:14px;align-items:center;margin-bottom:.75rem">
+        <div style="width:90px;height:90px;position:relative;flex-shrink:0"><canvas id="c-status"></canvas></div>
+        <div id="status-list" style="flex:1;display:flex;flex-direction:column;gap:6px"></div>
+      </div>
+      <div class="leg" style="margin-bottom:6px;flex-wrap:wrap">
+        <div class="li"><span class="ld" style="background:rgba(26,122,74,.8)"></span>Paid</div>
+        <div class="li"><span class="ld" style="background:rgba(37,99,235,.8)"></span>Scheduled</div>
+        <div class="li"><span class="ld" style="background:rgba(180,83,9,.8)"></span>Pending</div>
+        <div class="li"><span class="ld" style="background:rgba(192,57,43,.8)"></span>Cancelled</div>
+      </div>
+      <div class="cw" style="height:70px"><button class="chart-menu-btn" onclick="showCtxMenu(this,'c-status-t','Status T')" title="Download chart data">
+        <svg width="11" height="11" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="10" cy="10" r="1.5"/><circle cx="10" cy="4" r="1.5"/><circle cx="10" cy="16" r="1.5"/></svg>
+      </button>
+      <div class="ctx-menu" id="menu-c-status-t">
+        <div class="ctx-item" onclick="dlChartCSV('c-status-t','Status T')"><svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M10 4v9m-4-4l4 4 4-4"/><path d="M3 16v1a1 1 0 001 1h12a1 1 0 001-1v-1"/></svg>Download CSV</div>
+        <div class="ctx-item" onclick="dlChartPNG('c-status-t','Status T')"><svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="3" width="16" height="14" rx="2"/><path d="M2 13l4-4 4 4 4-5 4 5"/></svg>Download PNG</div>
+              <div class="ctx-item" onclick="openAudit('Status T','c-status-t')"><svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>Audit Data</div>
+      </div>
+      <canvas id="c-status-t"></canvas></div>
+    </div>
+  </div>
+  <div class="g2">
+    <div class="card">
+      <div class="ct">Days to Pay <span class="ct-sub">Invoice date → Scheduled payment</span></div>
+      <div class="cw" style="height:155px"><button class="chart-menu-btn" onclick="showCtxMenu(this,'c-days','Days')" title="Download chart data">
+        <svg width="11" height="11" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="10" cy="10" r="1.5"/><circle cx="10" cy="4" r="1.5"/><circle cx="10" cy="16" r="1.5"/></svg>
+      </button>
+      <div class="ctx-menu" id="menu-c-days">
+        <div class="ctx-item" onclick="dlChartCSV('c-days','Days')"><svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M10 4v9m-4-4l4 4 4-4"/><path d="M3 16v1a1 1 0 001 1h12a1 1 0 001-1v-1"/></svg>Download CSV</div>
+        <div class="ctx-item" onclick="dlChartPNG('c-days','Days')"><svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="3" width="16" height="14" rx="2"/><path d="M2 13l4-4 4 4 4-5 4 5"/></svg>Download PNG</div>
+              <div class="ctx-item" onclick="openAudit('Days','c-days')"><svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>Audit Data</div>
+      </div>
+      <canvas id="c-days"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="ct">Currency Exposure <span class="ct-sub">Invoice currency mix</span></div>
+      <div id="fx-rows" style="padding-top:4px"></div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ── DATA AUDIT MODAL ── -->
+<div class="audit-overlay" id="audit-overlay" onclick="if(event.target===this)closeAudit()">
+  <div class="audit-modal">
+    <div class="audit-header">
+      <div>
+        <div class="audit-title" id="audit-title">Data Audit</div>
+        <div class="audit-sub" id="audit-sub">Underlying rows powering this chart · USD Amount</div>
+      </div>
+      <button class="audit-close" onclick="closeAudit()">
+        <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 5L5 15M5 5l10 10"/></svg>
+      </button>
+    </div>
+    <div class="audit-toolbar">
+      <input class="audit-search" id="audit-search" placeholder="Filter by vendor, category, source…" oninput="filterAudit()">
+      <select class="audit-filter" id="audit-yr-filter" onchange="filterAudit()">
+        <option value="">All Years</option>
+        <option value="2025">2025 only</option>
+        <option value="2026">2026 only</option>
+      </select>
+      <select class="audit-filter" id="audit-cat-filter" onchange="filterAudit()">
+        <option value="">All Categories</option>
+      </select>
+      <select class="audit-filter" id="audit-src-filter" onchange="filterAudit()">
+        <option value="">All Sources</option>
+      </select>
+      <span class="audit-count" id="audit-count">0 rows</span>
+      <button class="audit-dl" onclick="dlAuditCSV()">
+        <svg width="11" height="11" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M10 4v9m-4-4l4 4 4-4"/><path d="M3 16v1a1 1 0 001 1h12a1 1 0 001-1v-1"/></svg>
+        Export Filtered
+      </button>
+    </div>
+    <div class="audit-body">
+      <table class="audit-tbl">
+        <thead>
+          <tr>
+            <th onclick="sortAudit('paidYear')">Year</th>
+            <th onclick="sortAudit('paidMonth')">Month</th>
+            <th onclick="sortAudit('vendor')">Vendor</th>
+            <th onclick="sortAudit('category')">Category</th>
+            <th onclick="sortAudit('customView')">Custom View</th>
+            <th onclick="sortAudit('source')">Source</th>
+            <th onclick="sortAudit('status')">Status</th>
+            <th onclick="sortAudit('usdAmt')" style="text-align:right">USD Amount</th>
+            <th onclick="sortAudit('currency')">Currency</th>
+          </tr>
+        </thead>
+        <tbody id="audit-tbody"></tbody>
+      </table>
+      <div id="audit-empty" class="audit-empty" style="display:none">No rows match your filters.</div>
+    </div>
+  </div>
+</div>
+
+</div><!-- .page -->
+</div><!-- #app -->
+<div class="toast" id="toast"></div>
+<script>
+// ── LOGOS ─────────────────────────────────────────────────────────────────────
+const LOGO_HORIZ = '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N3Zm8NSz4OQDd0Mg+JI32g/6jzVRtMtHtRsb1msE9fjNU63267sMtdG5hhdG0n4Qd7flPj4bq7SIKwcWOBZnlOpVjuOO47WXKkgo42SzQlnKxwmLiDuR5dVI3E5plWakYfStszohebZM6WlZK7lbM1wAfGXeROwIPhu1SyiCqGDZNxHYzj1PiNNgD6wUzBDS1VZB1hZ4NBeHhjgPLfy2Wgl0j1TptYrFfLxb6m9zTV9JX3K4QlvZRP7UF7NyQSGNA8Bt6lc5EFZuMfBMxy7JLFUYzj1ZdYqeikZK+At2Y4v3APMR5KyVuY6O300b2lrmxNDgfIgBfdEFVdXdMNQ8b1ndqTgFuN2bNVCrEcZBfFKW8sjHMJBcxw36j1+S3M9/4iNRKc4/DidNhtHUDs6u4yhzHtYejuXmJPr+KN/aPFWRRBVDh801zXAtdpH12P1r7IxlTSNuWzOzezxjk2Dtxzco9262l3wPMpeL2HLI8drHWJtdDIa4FnZhopw0nx38engrNog12TVlbb8euFdbqCW4VsFO99PSxgc00gHdaNyPE7earvwuaXZJS5ne8z1BsstNWuDm08dWGuMkkri6WXoSP3R7yrMogw/0XbP+nUf/AGG/7KCuLfSyuyqzWq8YlZvSbpRSmCanpmtY6SF/XfqQO64D/EVYFEFdNQ7Nn+X8L1qs9XjNwOTU1VBFUUruTtHtiJHa/G22LeU+PjupE4a7Jd8d0etFpvlBNQV8Lpu0gl25m7yOI32JHgQpHRAREQEREBERAREQFyeZ6fY5lDXS1VL6NWkdKunAa/f97yd9q6xFusai7p64rtVTTP0Fdrzo1ldLVFtufR3GAnuv7QRO29od/oSt9iGikhkbUZRWt5B19FpXeP0n/wC33qa0Xdu9qeIXLfJzRH1iN/z0iE80sKzWm22aibR2qigpIG/Mjbtv7SfEn2lZqIvPV11V1TVVOZlAiIsQREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERB/9k=';  // horizontal: icon + "Niural AI" text — topbar
+const LOGO_ICON  = '/9j/4AAQSkZJRgABAQAAAQABAAD/4gHYSUNDX1BST0ZJTEUAAQEAAAHIAAAAAAQwAABtbnRyUkdCIFhZWiAH4AABAAEAAAAAAABhY3NwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAA9tYAAQAAAADTLQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAlkZXNjAAAA8AAAACRyWFlaAAABFAAAABRnWFlaAAABKAAAABRiWFlaAAABPAAAABR3dHB0AAABUAAAABRyVFJDAAABZAAAAChnVFJDAAABZAAAAChiVFJDAAABZAAAAChjcHJ0AAABjAAAADxtbHVjAAAAAAAAAAEAAAAMZW5VUwAAAAgAAAAcAHMAUgBHAEJYWVogAAAAAAAAb6IAADj1AAADkFhZWiAAAAAAAABimQAAt4UAABjaWFlaIAAAAAAAACSgAAAPhAAAts9YWVogAAAAAAAA9tYAAQAAAADTLXBhcmEAAAAAAAQAAAACZmYAAPKnAAANWQAAE9AAAApbAAAAAAAAAABtbHVjAAAAAAAAAAEAAAAMZW5VUwAAACAAAAAcAEcAbwBvAGcAbABlACAASQBuAGMALgAgADIAMAAxADb/2wBDAAUDBAQEAwUEBAQFBQUGBwwIBwcHBw8LCwkMEQ8SEhEPERETFhwXExQaFRERGCEYGh0dHx8fExciJCIeJBweHx7/2wBDAQUFBQcGBw4ICA4eFBEUHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh7/wAARCAB5AHUDASIAAhEBAxEB/8QAHAABAAIDAQEBAAAAAAAAAAAAAAYHAgUIBAED/8QAPhAAAQMCAwQFBwsEAwAAAAAAAQACAwQFBhEhBxIxQRMiUWFxCDY3dIGRshQVIzRSYnN1sbPBFjJCcjOh8P/EABsBAQACAwEBAAAAAAAAAAAAAAACAwEFBgcE/8QAMBEAAgEDAgUDAgQHAAAAAAAAAAECAwQRBTEGEiFRYUFxscHREzKBkSI0NTaCofD/2gAMAwEAAhEDEQA/AOMkREAREQBERAEREAREQBERAEREAREQBERAEREARFI8IYMvmJpA6ip+ipQcn1U2bYx4faPcFbQoVbiap0ott+iBHBqcgpTa9n2LrjTtqILRJHE4ZtMz2xlw7g4gq48G7P7FhwMn6P5dXjX5RM0dU/cbwb46nvUuOpzK7jT+DOaPNdyw+y+r6/6/cmodzlq/4cvdhe1t2t01MHHJryM2O8HDMH3rVLrWrpqespn0tVBHUQSDJ8cjQ5rh3gqldpGDMN0T5J7FeKaOqzy+bOk6V7ieTN3NwPcfeFr9Y4WlZxdWjPMezwn9n8+A4kCobTX1turrhTU5kpqFrXVD8wNwOOQ05+xeFX7s9wZJQYDrbZdB0VTdWu6ZvExAtyaD3jj7clSmIrJcbDcpKC5U7opGk7rsurIPtNPMFavUdHq2VvSrST/iXXw89F46Y/XJhrBrURFpiIREQBERAF6bZQ1dyr4aGhgfPUzO3Y2N4k/+5rzK3fJ5tsJFzu72h0zC2njJ/wAQRvO9/VWw0qxd/dwoZwnv7LqZSyzZYM2U2+g3KvED219SNRTt/wCFh7+b/wDoeKsmNjI42xxsaxjBk1rRkGjsAHBZL4dAvX7HTraxhyUI4+X7stSwfVjvs+033robZvsfs9Jbqe44nhFwr5WB5pnn6GDPUNI/yI5k6dgUrnxBs6sjzRPuFgpHM0MUfR9XuIaNFoLjiykqrp21J1Mdtv06NkebsckVsQq6GopWzuiM0To+kYeszeBGY7xmofZqW84So2M/pe2V1PAwNfVWw7tS9oH97mOGbndoBXdJtmz/ABpSvEVPZbo0DrPg3ekZ7W9Zqo/bFs9GDKmnrbdPJNa6p5YwSavheBnuk8wQDkeOhz7VG11i31K5jCSlSqrONn5x1X0XuZTyVpaq+kutvhr6CYTU8zc2OGniCORB0IUPxZi5z7ZV1Fqwz8+W6kcWz1U2XQAjQ7oIJeBzI0C8d8r3YfmxTZoA+Oe57k9qjY05ySTN3JAzlmHaqWz1FrwtYKKjnY8wsY2lihiiMj5nburQ0cSciT7VsJ3NS6pypuahyp8zwn1y0t89HjPfDWN8mTme51Ta24T1baWClbK8uEMDd2NmfJo5BeZXHgjADpKq/VlXSS0VFWQy01BFUxgSsa86PLdd3IAAc+KrXEOF77YZHi5W6eOJrt0ThpdE7sycNNfevNrvSrqhSjXqReJZ9Nuv13RU0zTIiLVGAiIgCuzyefN65+tt+BUmrs8nnzeufrbfgXR8Kf1OHs/glDcs5ZwfWIvxG/qFgs4PrEX4jf1C9Zlsy06/x898WBb5JG9zHtt85a5pyIO4eC48YAGgAABdg7QvMG/fl0/7ZXHw4BcRwP8Ay9X3XwQhsTfYU97Nqdp3HFu+JWvyOW8Oiccj2jMA+xWr5TXmFSfmUfwSKqdhvpTs3jL+09Wt5TXmFSfmUfwSJq39wW/svmQf5jnPIZg5DMcDlwXhvVpobxSsp6+J7mxvEkbmSFj43jg5rmnMHUr3ou1nThUi4zWUyRWVoxbJYMQYksVfWS1dLboZJ6J9VLvSEtA+jLjq7PPTnoqov+JL3fZnyXO4zzNe7e6LfIjb2ZN4DJbDan6Qrz6x/AUZXj+qalXqN2zk+WDkt/PTPt6FbfoERFpSIREQBXZ5PPm9c/W2/AqTVx+TvWQmiu1uLgJhIycDtbkWk+w5e9dFwrJLU4Z8/DJR3LXWcH1iL8Rv6hYLOD6xF+I39QvWpbMtOvdoXmDfvy6f9srj4cAuq9rOJLHasI3S311xhjrKujligpwd6RznMIHVGoGvE6LlQcAuL4JpzjbVJSWE2seehCGxNthvpTs3jL+09Wt5TXmFSfmUfwSKqdhnpTs3jN+09WB5R2JLHW4fgsdHcoKm4R1rJZIojvbjQ14O8RoDmRpxTVKc56/b8qzhJvx1kH+YopEQanJdqSOa9qfpCvPrH8BRlbzH1bDccaXasp3B0UlS7ccODgNM/bktGvDL6Slc1GtnJ/JU9wiIvlMBERAFscO3musN2hudul3J4jwIza9p4tcOYK1yKcJypyU4PDQOhsGbRbJiDcpp3i3V506GV3UefuO5+ByPippqDzBC5FU4wZtJvVh3KWrJuVANOjld12D7rv4OY8F3elcYbU71f5L6r7fsTU+50JK98sr5pZHySPOb3vcXOce0k6lYrSYVxTZcS0/SWyrBlAzfTydWVniOY7xmFu13NCtSrQU6TTj4JmUUksL9+GV8T8iN5ji05EZEZjuWAAAyAyX06AknIAZknkoBjPahaLPv0tqDbnWjQlrvoWHvcP7vAe9U3l9b2UPxK8kvl+3cN4JxXVdLQUj6utqYqanYM3SSO3WhVHtB2pNq6Wa14bbIyOQFklY8bri08QwcRn2nXuCr7EmIrxiGr+UXWsfNkepGNI4/9W8B+q1K891biytcp0rZcsX6+r+3/dSDl2CIi5AgEREAREQBERAEREB+lNPPS1DKimmkhmYc2PY4tc09oIU8te1rE9JTiGpZRVxaMhJNGQ8+JaRn7lX6L67W/ubRt0JuOexlNolGKcd4ixFEaerqmwUp4wU7dxjv9ubvaVF0RVV7ircT56snJ+TGchERUgIiIAiIgCIiAIiIAiIgCIiAIiIAiIgCIiAIiID/2Q==';  // icon only (dark bg) — login screen
+// Topbar: horizontal logo replaces both the img + the "Expense Intelligence" text
+const tbImg = document.getElementById('tb-img');
+if(tbImg) tbImg.src = 'data:image/png;base64,' + LOGO_HORIZ;
+// Login: icon-only mark
+const loginLogo = document.getElementById('login-logo-img');
+if(loginLogo) loginLogo.src = 'data:image/png;base64,' + LOGO_ICON;
+
+// ── AUTH ──────────────────────────────────────────────────────────────────────
+let _la=0;
+document.getElementById('lbtn').onclick = tryLogin;
+document.getElementById('lp').onkeydown = e=>{if(e.key==='Enter')tryLogin()};
+document.getElementById('lu').onkeydown = e=>{if(e.key==='Enter')document.getElementById('lp').focus()};
+['lu','lp'].forEach(id=>document.getElementById(id).oninput=()=>document.getElementById('lerr').classList.remove('show'));
+function tryLogin(){
+  const u=document.getElementById('lu').value.trim(), p=document.getElementById('lp').value;
+  if(u==='admin'&&p==='admin'){
+    document.getElementById('login').classList.add('gone');
+    document.getElementById('app').classList.add('on');
+    _rawData = DUMMY;
+    _excludedCats.clear();
+    initDashboard(DUMMY);
+  } else {
+    _la++;
+    const el=document.getElementById('lerr');
+    el.textContent=`Incorrect credentials.${_la>=3?' ('+_la+' attempts)':''}`;
+    el.classList.add('show');
+    ['lu','lp'].forEach(id=>{const e=document.getElementById(id);e.classList.remove('err');void e.offsetWidth;e.classList.add('err')});
+    setTimeout(()=>['lu','lp'].forEach(id=>document.getElementById(id).classList.remove('err')),400);
+  }
+}
+document.getElementById('lout').onclick=()=>{
+  document.getElementById('app').classList.remove('on');
+  document.getElementById('login').classList.remove('gone');
+  document.getElementById('lu').value='';document.getElementById('lp').value='';
+};
+
+// ── CONSTANTS ─────────────────────────────────────────────────────────────────
+const MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const PAL=['#5b4fe0','#2563eb','#0891b2','#059669','#d97706','#dc2626','#7c3aed','#be185d','#065f46','#1e3a5f','#92400e','#1d4ed8'];
+const SRC_PAL=['#5b4fe0','#2563eb','#0891b2','#059669','#d97706','#dc2626'];
+const ACCENT='#5b4fe0', ACCENT_M='rgba(91,79,224,.55)', POS='#1a7a4a', NEG='#c0392b', AMB='#b45309';
+const GC='rgba(0,0,0,.05)', TC='rgba(0,0,0,.3)';
+const TT={backgroundColor:'#111',titleColor:'#fff',bodyColor:'rgba(255,255,255,.7)',titleFont:{family:'Libre Baskerville',size:11,weight:'bold'},bodyFont:{family:'DM Mono',size:10},padding:11,cornerRadius:3,borderWidth:0,mode:'index',intersect:false};
+
+// ── CHART UTILS ────────────────────────────────────────────────────────────────
+const C={};
+function mk(id,cfg){if(C[id])C[id].destroy();const el=document.getElementById(id);if(!el)return;C[id]=new Chart(el,cfg);}
+function bo(yF,y2F){
+  return{responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{display:false},tooltip:{...TT}},
+    scales:{
+      x:{grid:{color:GC,drawTicks:false},ticks:{color:TC,font:{size:10,family:'DM Mono'},maxRotation:0},border:{display:false}},
+      y:{grid:{color:GC,drawTicks:false},ticks:{color:TC,font:{size:10,family:'DM Mono'},callback:yF,padding:7},border:{display:false}},
+      ...(y2F?{y2:{position:'right',grid:{display:false},ticks:{color:TC,font:{size:10,family:'DM Mono'},callback:y2F,padding:7},border:{display:false}}}:{})
+    }};
+}
+function fK(v){return v>=1e6?'$'+(v/1e6).toFixed(1)+'M':v>=1000?'$'+(v/1000).toFixed(0)+'K':'$'+Math.round(v);}
+function fF(v){return '$'+Math.round(v).toLocaleString();}
+function pd(cy,py){if(!py)return null;return +((cy-py)/py*100).toFixed(1);}
+
+// ── DUMMY DATA (2025 + 2026 partial) ──────────────────────────────────────────
+const SRC_NAMES=['Corporate Card','Accounts Payable','Expense Reports','Purchase Orders'];
+function rng(a,b){return Math.round(a+(b-a)*Math.random());}
+function genSrc25(){return SRC_NAMES.map((_,si)=>MON.map(()=>rng([55000,70000,32000,24000][si]*0.85,[55000,70000,32000,24000][si]*1.2)));}
+const SRC25=genSrc25();
+const MON25=MON.map((_,i)=>SRC25.reduce((s,a)=>s+a[i],0));
+const MON26=[...Array(4)].map((_,i)=>Math.round(MON25[i]*(1.04+Math.random()*0.14)));
+const TOTAL25=MON25.reduce((a,b)=>a+b,0), TOTAL26=MON26.reduce((a,b)=>a+b,0);
+
+const VDATA=[
+  {name:'AWS',cat:'Cloud Infrastructure',src:'Accounts Payable',cv:'Engineering',y25:384200,y26:108000},
+  {name:'Salesforce',cat:'SaaS & Software',src:'Accounts Payable',cv:'Sales',y25:219400,y26:60000},
+  {name:'Google Ads',cat:'Marketing & Ads',src:'Corporate Card',cv:'Marketing',y25:198700,y26:54000},
+  {name:'Stripe',cat:'SaaS & Software',src:'Accounts Payable',cv:'Engineering',y25:176300,y26:44000},
+  {name:'Meta Ads',cat:'Marketing & Ads',src:'Corporate Card',cv:'Marketing',y25:154800,y26:48000},
+  {name:'Workday',cat:'HR & Benefits',src:'Accounts Payable',cv:'People Ops',y25:143200,y26:38000},
+  {name:'McKinsey',cat:'Professional Services',src:'Purchase Orders',cv:'Finance',y25:138500,y26:0},
+  {name:'Hilton Hotels',cat:'Travel & Lodging',src:'Expense Reports',cv:'Sales',y25:127400,y26:28000},
+  {name:'Microsoft 365',cat:'SaaS & Software',src:'Accounts Payable',cv:'Engineering',y25:118900,y26:32000},
+  {name:'GitHub',cat:'SaaS & Software',src:'Accounts Payable',cv:'Engineering',y25:97600,y26:26000},
+  {name:'Slack',cat:'SaaS & Software',src:'Accounts Payable',cv:'Engineering',y25:89300,y26:24000},
+  {name:'Delta Airlines',cat:'Travel & Lodging',src:'Expense Reports',cv:'Sales',y25:84700,y26:18000},
+  {name:'Greenhouse',cat:'HR & Benefits',src:'Accounts Payable',cv:'People Ops',y25:78400,y26:22000},
+  {name:'Deloitte',cat:'Legal & Compliance',src:'Purchase Orders',cv:'Finance',y25:74200,y26:0},
+  {name:'Zoom',cat:'SaaS & Software',src:'Accounts Payable',cv:'Engineering',y25:68900,y26:18000},
+  {name:'Lattice',cat:'HR & Benefits',src:'Accounts Payable',cv:'People Ops',y25:63400,y26:17000},
+  {name:'DocuSign',cat:'Legal & Compliance',src:'Accounts Payable',cv:'Finance',y25:58700,y26:15000},
+  {name:'UPS',cat:'Logistics',src:'Accounts Payable',cv:'Operations',y25:54200,y26:14000},
+  {name:'Canva',cat:'Marketing & Ads',src:'Corporate Card',cv:'Marketing',y25:49800,y26:14000},
+  {name:'WeWork',cat:'Office & Facilities',src:'Accounts Payable',cv:'Operations',y25:47600,y26:0},
+];
+const CAT25={},CAT26={},CV25={},CV26={};
+VDATA.forEach(v=>{
+  CAT25[v.cat]=(CAT25[v.cat]||0)+v.y25; CAT26[v.cat]=(CAT26[v.cat]||0)+v.y26;
+  CV25[v.cv]=(CV25[v.cv]||0)+v.y25; CV26[v.cv]=(CV26[v.cv]||0)+v.y26;
+});
+const CATS=Object.entries(CAT25).sort((a,b)=>b[1]-a[1]).map(([cat,y25])=>({cat,y25,y26:CAT26[cat]||0}));
+const CVS=Object.entries(CV25).sort((a,b)=>b[1]-a[1]).map(([name,y25])=>({name,y25,y26:CV26[name]||0}));
+const SRC25_TOT=SRC_NAMES.map((_,i)=>SRC25[i].reduce((a,b)=>a+b,0));
+const SRC26_TOT=SRC_NAMES.map((_,i)=>Math.round(SRC25_TOT[i]/12*3*(1.05+Math.random()*.1)));
+const INV25=MON.map(()=>rng(20,40)), INV26=[rng(22,42),rng(22,42),rng(22,42)];
+
+const DUMMY={
+  mon25:MON25, mon26:MON26, total25:TOTAL25, total26:TOTAL26,
+  src25:SRC25, srcTot25:SRC25_TOT, srcTot26:SRC26_TOT, srcNames:SRC_NAMES, srcColors:SRC_PAL,
+  vendors:VDATA, cats:CATS, cvs:CVS,
+  inv25:INV25, inv26:INV26, invTotal25:INV25.reduce((a,b)=>a+b,0), invTotal26:INV26.reduce((a,b)=>a+b,0),
+  statusCounts:{paid:380,pending:42,cancelled:18},
+  statusMonthly:{paid:MON.map(()=>rng(28,36)),pending:MON.map(()=>rng(2,6)),cancelled:MON.map(()=>rng(0,3))},
+  currencyCounts:{USD:340,EUR:62,GBP:24,CAD:14},
+  avgDaysToPay:22,
+  avgDaysMonthly:MON.map(()=>rng(14,34)),
+  months26:MON.slice(0,4),  // Jan–Apr 2026
+};
+
+// ── INIT ──────────────────────────────────────────────────────────────────────
+// ── CATEGORY FILTER ───────────────────────────────────────────────────────────
+let _excludedCats = new Set(); // categories to EXCLUDE from dashboard
+let _top10Cats    = [];        // [{cat, y25, color}] — the 10 pills
+
+// Called once when data loads — build pills from top 10 categories in data
+function buildCatFilter(d){
+  _top10Cats = d.cats.slice(0,10).map((c,i)=>({cat:c.cat, y25:c.y25, y26:c.y26, color:PAL[i]}));
+  renderCatPills();
+}
+
+function renderCatPills(){
+  const container = document.getElementById('cat-pills');
+  if(!container) return;
+  container.innerHTML = _top10Cats.map(c=>{
+    const excluded = _excludedCats.has(c.cat);
+    const amt = fK((c.y25||0) + (c.y26||0));
+    return `<div class="cat-pill${excluded?' excluded':''}" onclick="toggleCat('${c.cat.replace(/'/g,"\\'")}')">
+      <span class="pill-swatch" style="background:${c.color}"></span>
+      ${c.cat}
+      <span class="pill-amt">${amt}</span>
+    </div>`;
+  }).join('');
+
+  const n = _excludedCats.size;
+  const countEl = document.getElementById('cat-filter-active-count');
+  const nEl     = document.getElementById('cat-filter-n');
+  if(countEl) countEl.style.display = n > 0 ? 'inline' : 'none';
+  if(nEl)     nEl.textContent = n;
+}
+
+function toggleCat(cat){
+  if(_excludedCats.has(cat)) _excludedCats.delete(cat);
+  else _excludedCats.add(cat);
+  renderCatPills();
+  applyFilters();
+}
+
+function catFilterSelectAll(){
+  _excludedCats.clear();
+  renderCatPills();
+  applyFilters();
+}
+
+function catFilterClearAll(){
+  _top10Cats.forEach(c => _excludedCats.add(c.cat));
+  renderCatPills();
+  applyFilters();
+}
+
+// Re-derive filtered data from the source _rawData and re-render dashboard
+function applyFilters(){
+  if(!_rawData) return;
+  const filtered = applyExclusions(_rawData);
+  initDashboard(filtered, false); // false = don't rebuild pills
+}
+
+// Apply _excludedCats to a data object — zero out excluded rows
+function applyExclusions(d){
+  if(_excludedCats.size === 0) return d;
+  const excl = _excludedCats;
+
+  // Always reprocess from raw rows for full accuracy
+  if(_rawRows && _rawRows.length){
+    function parseAmt(s){return Math.abs(parseFloat(String(s||'0').replace(/[$,\s]/g,'')));}
+    function parsePeriod(r){
+      if(r.paidYear&&r.paidMonth){
+        const yr=parseInt(r.paidYear);
+        const monRaw=String(r.paidMonth).trim();
+        const mon=isNaN(parseInt(monRaw))?new Date(monRaw+' 1 2000').getMonth():parseInt(monRaw)-1;
+        if(!isNaN(yr)&&mon>=0&&mon<=11)return{yr,mon};
+      }
+      if(r.invoiceDate){const d2=new Date(r.invoiceDate);if(!isNaN(d2.getTime()))return{yr:d2.getFullYear(),mon:d2.getMonth()};}
+      return null;
+    }
+
+    const mon25=Array(12).fill(0), mon26=Array(12).fill(0);
+    const src25Arr={}, src26Tot={};
+    const vend25={}, vend26={}, cat25={}, cat26={}, cv25={}, cv26={};
+    const inv25=Array(12).fill(0), inv26=Array(12).fill(0);
+
+    // Control fields — recomputed from filtered rows
+    const statusCounts={};
+    const statusMonthly={paid:Array(12).fill(0),scheduled:Array(12).fill(0),pending:Array(12).fill(0),cancelled:Array(12).fill(0)};
+    const currencyCounts={};
+    const daysArr=[], daysM=Array(12).fill(0), daysMC=Array(12).fill(0);
+    let totalInvoiceCount=0;
+    let total24=0;
+
+    _rawRows.forEach(r=>{
+      const cat = r.category||'Uncategorized';
+      if(excl.has(cat)) return; // ← EXCLUDED — skip this row entirely
+
+      const p = parsePeriod(r); if(!p) return;
+      const {yr,mon} = p;
+      const amt = parseAmt(r.usdAmt); if(!amt||isNaN(amt)) return;
+      const status=(r.status||'unknown').toLowerCase().trim();
+      const curr=(r.currency||'USD').trim().toUpperCase()||'USD';
+
+      // ── Status classification — covers all common AP tool values ──────────
+      // Paid/Complete: money has left
+      // Scheduled/Approved/Processing: committed spend, will leave
+      // Pending/Open/Submitted: in-flight, not yet approved
+      // Draft: not submitted yet — excluded from totals
+      // Cancelled/Void/Rejected: dead, excluded from totals
+      const skey =
+        /^(paid|complete|payment.?complete)/i.test(status)             ? 'paid'      :
+        /^(scheduled|approved|processing|payment.?process)/i.test(status) ? 'scheduled' :
+        /^(pending|open|submitted|in.?review|in.?approval)/i.test(status) ? 'pending'   :
+        /^(draft|new)/i.test(status)                                   ? 'draft'     :
+        /^(cancelled|canceled|void|voided|rejected|failed|declined|decline)/i.test(status) ? 'cancelled' :
+        'pending'; // fallback: treat unknown as pending (included in totals)
+
+      // valid = rows that should count toward USD spend totals
+      // Excludes: cancelled, void, rejected, failed, draft
+      const valid = !/^(cancelled|canceled|void|voided|rejected|failed|declined|decline|draft|new)/i.test(status);
+
+      // Status, currency, invoice counts — all years
+      statusCounts[skey]=(statusCounts[skey]||0)+1;
+      currencyCounts[curr]=(currencyCounts[curr]||0)+1;
+      totalInvoiceCount++;
+      if(yr===2025&&mon!==null){
+        if(skey==='paid')statusMonthly.paid[mon]++;
+        else if(skey==='scheduled')statusMonthly.scheduled[mon]++;
+        else if(skey==='cancelled')statusMonthly.cancelled[mon]++;
+        else statusMonthly.pending[mon]++;
+      }
+
+      // Days to pay
+      if(r.invoiceDate&&r.schedDate){
+        const invD=new Date(r.invoiceDate),schD=new Date(r.schedDate);
+        if(!isNaN(invD)&&!isNaN(schD)){
+          const diff=Math.round((schD-invD)/86400000);
+          if(diff>=0&&diff<365){daysArr.push(diff);daysM[mon]+=diff;daysMC[mon]++;}
+        }
+      }
+
+      // 2024 summary only
+      if(yr===2024&&valid){total24+=amt;}
+
+      // Chart data: 2025 & 2026 only
+      if(!valid) return;
+      if(yr!==2025&&yr!==2026) return;
+
+      const src=r.source||'Unknown', vend=r.vendor||'Unknown', cv=r.customView||'(none)';
+      if(yr===2025){
+        mon25[mon]+=amt;
+        src25Arr[src]=src25Arr[src]||Array(12).fill(0); src25Arr[src][mon]+=amt;
+        vend25[vend]=(vend25[vend]||0)+amt; cat25[cat]=(cat25[cat]||0)+amt; cv25[cv]=(cv25[cv]||0)+amt;
+        inv25[mon]++;
+      } else {
+        mon26[mon]+=amt;
+        src26Tot[src]=(src26Tot[src]||0)+amt;
+        vend26[vend]=(vend26[vend]||0)+amt; cat26[cat]=(cat26[cat]||0)+amt; cv26[cv]=(cv26[cv]||0)+amt;
+        inv26[mon]++;
+      }
+    });
+
+    let last26=-1; for(let m=11;m>=0;m--){if(mon26[m]>0){last26=m;break;}}
+    const months26=last26>=0?MON.slice(0,last26+1):d.months26;
+    const total25=mon25.reduce((a,b)=>a+b,0);
+    const total26=mon26.reduce((a,b)=>a+b,0);
+
+    const srcBySpend=Object.entries(src25Arr).map(([n,arr])=>({n,tot:arr.reduce((a,b)=>a+b,0)})).sort((a,b)=>b.tot-a.tot).slice(0,6).map(x=>x.n);
+    const srcTot25=srcBySpend.map(n=>(src25Arr[n]||Array(12).fill(0)).reduce((a,b)=>a+b,0));
+    const srcTot26=srcBySpend.map(n=>src26Tot[n]||0);
+    const src25mat=srcBySpend.map(n=>src25Arr[n]||Array(12).fill(0));
+    const vendors=Object.entries(vend25).sort((a,b)=>b[1]-a[1]).slice(0,20).map(([name,y25])=>{
+      const mr=_rawRows.find(r=>r.vendor===name&&!excl.has(r.category||'Uncategorized'));
+      return{name,y25:Math.round(y25),y26:Math.round(vend26[name]||0),cat:mr?.category||'Uncategorized',src:mr?.source||'Unknown',cv:mr?.customView||'(none)'};
+    });
+    const cats=Object.entries(cat25).sort((a,b)=>b[1]-a[1]).slice(0,14).map(([cat,y25])=>({cat,y25:Math.round(y25),y26:Math.round(cat26[cat]||0)}));
+    const cvs=Object.entries(cv25).sort((a,b)=>b[1]-a[1]).map(([name,y25])=>({name,y25:Math.round(y25),y26:Math.round(cv26[name]||0)}));
+    const avgDaysToPay=daysArr.length?Math.round(daysArr.reduce((a,b)=>a+b,0)/daysArr.length):null;
+    const avgDaysMonthly=daysM.map((sum,i)=>daysMC[i]?Math.round(sum/daysMC[i]):0);
+    const invTotal25=inv25.reduce((a,b)=>a+b,0), invTotal26=inv26.reduce((a,b)=>a+b,0);
+
+    return {
+      ...d,
+      mon25:mon25.map(v=>Math.round(v)), mon26:mon26.map(v=>Math.round(v)),
+      total25, total26, total24:Math.round(total24), months26,
+      src25:src25mat, srcTot25, srcTot26,
+      srcNames:srcBySpend, srcColors:SRC_PAL.slice(0,srcBySpend.length),
+      vendors, cats, cvs,
+      invTotal25, invTotal26,
+      // ALL control fields re-derived from filtered data
+      statusCounts, statusMonthly, currencyCounts,
+      avgDaysToPay, avgDaysMonthly,
+      invoiceCountMonthly: inv25, // monthly invoice counts for KPI charts
+    };
+  }
+
+  // Fallback (no raw rows): filter pre-aggregated data
+  const cats   = d.cats.filter(c=>!excl.has(c.cat));
+  const vendors= d.vendors.filter(v=>!excl.has(v.cat));
+  const cvs    = d.cvs.filter(c=>{
+    // try to exclude CVs that only belong to excluded cats — best-effort
+    return true;
+  });
+  const total25= cats.reduce((s,c)=>s+c.y25,0);
+  const total26= cats.reduce((s,c)=>s+c.y26,0);
+  const mon25  = Array(12).fill(0);
+  const mon26  = Array(12).fill(0);
+  return {...d, cats, vendors, cvs, total25, total26, mon25, mon26};
+}
+
+function initDashboard(d, rebuildPills=true){
+  if(rebuildPills) buildCatFilter(d);
+  buildExecSummary(d);
+  buildObservations(d);
+  buildKPIs(d);
+  buildTrend(d);
+  buildSources(d);
+  buildCategoryVendor(d);
+  buildCustomView(d);
+  buildCatBucket(d);
+  buildKPISection(d);
+}
+
+// Store the unfiltered source data
+let _rawData = null;
+
+
+// ── EXECUTIVE SUMMARY ─────────────────────────────────────────────────────────
+function buildExecSummary(d){
+  const el = document.getElementById('exec-summary');
+  const textEl = document.getElementById('exec-text');
+  const tsEl   = document.getElementById('exec-timestamp');
+  const scopeEl= document.getElementById('exec-scope');
+  const filtTag= document.getElementById('exec-filtered-tag');
+  if(!el||!textEl) return;
+
+  el.style.display = 'block';
+
+  const isFiltered = _excludedCats && _excludedCats.size > 0;
+  if(filtTag) filtTag.style.display = isFiltered ? 'inline' : 'none';
+
+  const fK2 = v => v>=1e6?'$'+(v/1e6).toFixed(1)+'M':v>=1000?'$'+(v/1000).toFixed(0)+'K':'$'+Math.round(v);
+  const fF2 = v => '$'+Math.round(v).toLocaleString();
+  const pct = (a,b) => b>0 ? +((a-b)/b*100).toFixed(1) : null;
+
+  const ytdMon = (d.months26||[]).length || 3;
+  const ytd25  = d.mon25.slice(0,ytdMon).reduce((a,b)=>a+b,0) || 1;
+  const yoy    = pct(d.total26, ytd25);
+  const runRate= ytdMon > 0 ? Math.round(d.total26/ytdMon*12) : 0;
+  const rrVs25 = pct(runRate, d.total25);
+  const top    = d.cats && d.cats[0];
+  const topVnd = d.vendors && d.vendors[0];
+  const top5   = d.vendors ? d.vendors.slice(0,5).reduce((s,v)=>s+v.y25,0) : 0;
+  const concPct= d.total25 > 0 ? (top5/d.total25*100).toFixed(0) : null;
+
+  // Build sentence-level summary
+  let parts = [];
+
+  // Headline
+  if(yoy !== null){
+    const dir  = yoy >= 0 ? 'up' : 'down';
+    const cls  = yoy >= 0 ? 'e-up' : 'e-dn';
+    const sign = yoy >= 0 ? '+' : '';
+    parts.push(`Spend in the <strong>first ${ytdMon} month${ytdMon>1?'s':''} of 2026</strong> totals <strong>${fF2(d.total26)}</strong>, <span class="${cls}">${sign}${yoy}%</span> versus the same period in 2025.`);
+  }
+
+  // Run-rate
+  if(runRate > 0){
+    const cls  = rrVs25 !== null ? (rrVs25 >= 0 ? 'e-up' : 'e-dn') : '';
+    const sign = rrVs25 !== null ? (rrVs25 >= 0 ? '+' : '') : '';
+    const rrNote = rrVs25 !== null ? ` (<span class="${cls}">${sign}${rrVs25}% vs full-year 2025 of ${fK2(d.total25)}</span>)` : '';
+    parts.push(`At this pace, the annualized 2026 run-rate is <span class="e-hi">${fK2(runRate)}</span>${rrNote}.`);
+  }
+
+  // Category concentration
+  if(top){
+    const topGrowth = top.y26 > 0 ? pct(top.y26, top.y25/12*ytdMon) : null;
+    const tgSign = topGrowth !== null ? (topGrowth >= 0 ? '+' : '') : '';
+    const tgCls  = topGrowth !== null ? (topGrowth >= 0 ? 'e-up' : 'e-dn') : '';
+    parts.push(`<strong>${top.cat}</strong> remains the largest spend category at <span class="e-hi">${fK2(top.y25)}</span> for 2025${topGrowth !== null ? `, trending <span class="${tgCls}">${tgSign}${topGrowth}%</span> in 2026 YTD` : ''}.`);
+  }
+
+  // Fastest mover
+  if(d.cats){
+    const withBoth = d.cats.filter(c=>c.y25>0&&c.y26>0);
+    if(withBoth.length){
+      const ranked = withBoth.map(c=>({c,g:pct(c.y26, c.y25/12*ytdMon)})).sort((a,b)=>b.g-a.g);
+      const top1 = ranked[0];
+      if(top1.g>5) parts.push(`The fastest-growing category is <strong>${top1.c.cat}</strong> at <span class="e-up">+${top1.g.toFixed(0)}%</span> YoY — warranting attention given its trajectory.`);
+    }
+  }
+
+  // Vendor concentration risk
+  if(topVnd && concPct !== null){
+    const risk = concPct >= 70 ? 'a concentration risk' : concPct >= 50 ? 'notable supplier dependency' : 'healthy diversification';
+    parts.push(`Top vendor <strong>${topVnd.name}</strong> accounts for <span class="e-hi">${(top5/(d.total25||1)*100<100?(top5/(d.total25||1)*100).toFixed(0):concPct)}%</span> of spend across the top 5 vendors — indicating ${risk}.`);
+  }
+
+  // Filter note
+  if(isFiltered && _excludedCats){
+    const n = _excludedCats.size;
+    parts.push(`<em>Note: ${n} categor${n>1?'ies':'y'} currently excluded via filter — figures reflect the filtered view only.</em>`);
+  }
+
+  textEl.innerHTML = parts.join(' ');
+
+  if(tsEl) tsEl.textContent = 'Updated ' + new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+  if(scopeEl) scopeEl.textContent = isFiltered
+    ? `Filtered — ${_excludedCats.size} categor${_excludedCats.size>1?'ies':'y'} excluded`
+    : `Based on full dataset · 2025 & 2026`;
+}
+
+// ── OBSERVATIONS ─────────────────────────────────────────────────────────────
+function buildObservations(d){
+  const listEl   = document.getElementById('obs-list');
+  const badgeEl  = document.getElementById('obs-filtered-badge');
+  if(!listEl) return;
+
+  const isFiltered = _excludedCats && _excludedCats.size > 0;
+  if(badgeEl) badgeEl.style.display = isFiltered ? 'inline-block' : 'none';
+
+  const obs = [];
+  const fK2 = v => v >= 1e6 ? '$'+(v/1e6).toFixed(2).replace(/\.?0+$/,'')+'M' : v >= 1000 ? '$'+(v/1000).toFixed(0)+'K' : '$'+Math.round(v);
+  const fF2 = v => '$'+Math.round(v).toLocaleString();
+  const ytdMon = (d.months26||[]).length || 3;
+  const ytd25  = d.mon25.slice(0, ytdMon).reduce((a,b)=>a+b,0) || 1;
+  const yoy    = ytd25 > 0 ? +((d.total26 - ytd25)/ytd25*100).toFixed(1) : null;
+
+  // 1. Overall YoY trajectory
+  if(yoy !== null){
+    const dir   = yoy >= 0 ? 'up' : 'down';
+    const cls   = yoy >= 0 ? 'neg' : 'pos';  // up = more spend = red, down = less = green
+    const icon  = yoy >= 0 ? '📈' : '📉';
+    const sign  = yoy >= 0 ? '+' : '';
+    obs.push({icon, text: `2026 YTD spend is <span class="${cls}">${sign}${yoy}%</span> vs the same period in 2025 — <strong>${fF2(d.total26)}</strong> this year vs <strong>${fF2(ytd25)}</strong> last year.`});
+  }
+
+  // 2. Run-rate vs full year
+  if(d.total26 > 0 && ytdMon > 0){
+    const runRate = Math.round(d.total26 / ytdMon * 12);
+    const vs25    = d.total25 > 0 ? +((runRate - d.total25)/d.total25*100).toFixed(1) : null;
+    const cls     = vs25 !== null ? (vs25 >= 0 ? 'neg' : 'pos') : '';
+    const sign    = vs25 !== null ? (vs25 >= 0 ? '+' : '') : '';
+    obs.push({icon:'🔮', text: `Annualized 2026 run-rate is <span class="hi">${fK2(runRate)}</span>${vs25 !== null ? `, <span class="${cls}">${sign}${vs25}%</span> vs 2025 full-year spend of ${fK2(d.total25)}` : ''}.`});
+  }
+
+  // 3. Largest & fastest-growing category
+  if(d.cats && d.cats.length){
+    const top = d.cats[0];
+    obs.push({icon:'🏷️', text: `Largest category is <strong>${top.cat}</strong> at <span class="hi">${fF2(top.y25)}</span> in 2025, representing <strong>${(top.y25/(d.total25||1)*100).toFixed(1)}%</strong> of total spend.`});
+
+    // Fastest YoY grower (with 2026 data)
+    const withBoth = d.cats.filter(c => c.y25 > 0 && c.y26 > 0);
+    if(withBoth.length){
+      const samePeriod25 = c => c.y25 / 12 * ytdMon;
+      const growers = withBoth.map(c => ({c, g: (c.y26 - samePeriod25(c)) / samePeriod25(c) * 100})).sort((a,b)=>b.g-a.g);
+      const top1 = growers[0];
+      const bot1 = growers[growers.length-1];
+      if(top1.g > 0) obs.push({icon:'🚀', text: `Fastest-growing category YTD is <strong>${top1.c.cat}</strong> <span class="neg">(+${top1.g.toFixed(1)}% vs same period)</span> — <span class="hi">${fF2(top1.c.y26)}</span> so far in 2026.`});
+      if(bot1.g < 0) obs.push({icon:'📉', text: `Sharpest decline is <strong>${bot1.c.cat}</strong> <span class="pos">(${bot1.g.toFixed(1)}% vs same period)</span> — down to <span class="hi">${fF2(bot1.c.y26)}</span> in 2026 YTD.`});
+    }
+  }
+
+  // 4. Top vendor concentration
+  if(d.vendors && d.vendors.length){
+    const top  = d.vendors[0];
+    const top5 = d.vendors.slice(0,5).reduce((s,v)=>s+v.y25,0);
+    const conc = d.total25 > 0 ? (top5/d.total25*100).toFixed(1) : null;
+    obs.push({icon:'🏢', text: `Top vendor is <strong>${top.name}</strong> at <span class="hi">${fF2(top.y25)}</span> in 2025. Top 5 vendors account for <span class="${conc > 60 ? 'neg' : 'hi'}">${conc}%</span> of total spend${conc > 70 ? ' — high concentration risk' : ''}.`});
+  }
+
+  // 5. Source mix insight
+  if(d.srcNames && d.srcNames.length && d.srcTot25 && d.srcTot25.length){
+    const topSrcIdx = d.srcTot25.indexOf(Math.max(...d.srcTot25));
+    const topSrc    = d.srcNames[topSrcIdx];
+    const topPct    = d.total25 > 0 ? (d.srcTot25[topSrcIdx]/d.total25*100).toFixed(1) : null;
+    if(topSrc && topPct) obs.push({icon:'💳', text: `Dominant payment source is <strong>${topSrc}</strong> at <span class="hi">${topPct}%</span> of 2025 spend. ${d.srcNames.length} payment channels active.`});
+  }
+
+  // 6. Filter-specific insight
+  if(isFiltered && _excludedCats){
+    const excl  = [..._excludedCats];
+    const total = (_rawData||d).total25 || 1;
+    const excAmount = (_rawData||d).cats ? (_rawData||d).cats.filter(c=>excl.includes(c.cat)).reduce((s,c)=>s+c.y25,0) : 0;
+    const exPct = (excAmount/total*100).toFixed(1);
+    obs.push({icon:'🔍', text: `<strong>Filter active:</strong> Excluding ${excl.length} categor${excl.length>1?'ies':'y'} (<em>${excl.slice(0,3).join(', ')}${excl.length>3?'…':''}</em>) — removing <span class="neg">${fF2(excAmount)} (${exPct}%)</span> from 2025 spend. Observations below reflect the filtered dataset.`});
+  }
+
+  // 7. Avg invoice size
+  if(d.invTotal25 > 0 && d.total25 > 0){
+    const avgInv = Math.round(d.total25 / d.invTotal25);
+    obs.push({icon:'🧾', text: `Average invoice size in 2025 was <span class="hi">${fK2(avgInv)}</span> across <strong>${d.invTotal25.toLocaleString()}</strong> invoices.`});
+  }
+
+  listEl.innerHTML = obs.length
+    ? obs.map(o=>`<div class="obs-item"><span class="obs-icon">${o.icon}</span><span class="obs-text">${o.text}</span></div>`).join('')
+    : '<div class="obs-empty">Upload data to see observations.</div>';
+}
+
+// ── KPIs ──────────────────────────────────────────────────────────────────────
+function buildKPIs(d){
+  const ytdMon = d.months26.length;
+  const ytd25 = d.mon25.slice(0,ytdMon).reduce((a,b)=>a+b,0);
+  const yoy = pd(d.total26, ytd25);
+  const sign = yoy>=0?'+':'';
+
+  set('kv-25t', fK(d.total25)); set('kd-25t','Full year 2025','neu');
+  set('kv-26t', fK(d.total26)); set('kd-26t', d.months26.join('–')+' 2026','neu');
+  set('kv-yoy', yoy!==null?sign+yoy+'%':'—'); setClass('kd-yoy', yoy>=0?'up':'dn');
+  document.getElementById('kd-yoy').textContent = `vs ${fF(ytd25)} same period`;
+  const avg25 = Math.round(d.total25 / d.mon25.filter(v=>v>0).length);
+  const avg26 = Math.round(d.total26 / d.months26.length);
+  set('kv-avg25', fK(avg25)); set('kd-avg25', '12 active months','neu');
+  set('kv-avg26', fK(avg26)); set('kd-avg26', ytdMon+' months 2026','neu');
+  set('kv-inv25', d.invTotal25.toLocaleString()); set('kd-inv25', fK(Math.round(d.total25/d.invTotal25))+'/invoice','neu');
+  set('kv-inv26', d.invTotal26.toLocaleString()); set('kd-inv26', fK(Math.round(d.total26/d.invTotal26))+'/invoice','neu');
+  const vendorCount = d.vendors.length; set('kv-vend', vendorCount); set('kd-vend','Active vendors','neu');
+  set('kv-cats', d.cats.length); set('kv-src', (d.srcNames[d.srcTot25.indexOf(Math.max(...d.srcTot25))]||'—').split(' ')[0]);
+  set('kd-src', Math.round(Math.max(...d.srcTot25)/d.total25*100)+'% of spend','neu');
+
+  // header — show 2026 YTD as hero number
+  document.getElementById('ph-tot25').textContent = fK(d.total26);
+  const hdp = document.getElementById('ph-dp');
+  if(yoy!==null){ hdp.textContent=sign+yoy+'% vs same period 2025'; hdp.className='dp '+(yoy>=0?'up':'dn'); }
+}
+function set(id,v,cls){const el=document.getElementById(id);if(!el)return;el.textContent=v;if(cls)el.className='kd '+cls;}
+function setClass(id,cls){const el=document.getElementById(id);if(el)el.className='kd '+cls;}
+
+// ── TREND ──────────────────────────────────────────────────────────────────────
+function buildTrend(d){
+  const ytdMon=d.months26.length;
+  const ytd25=d.mon25.slice(0,ytdMon).reduce((a,b)=>a+b,0);
+  const yoy=pd(d.total26,ytd25), sign=yoy>=0?'+':'';
+
+  const ytdLabel = d.months26.length>0 ? d.months26[0]+'-'+d.months26[d.months26.length-1]+' 2026' : '2026 YTD';
+  document.getElementById('yr-stats').innerHTML=[
+    {l:'2026 YTD ('+ytdLabel+')',v:fF(d.total26),s:fK(Math.round(d.total26/Math.max(ytdMon,1)))+'/mo',bold:true},
+    {l:'2025 Full Year',v:fF(d.total25),s:fK(Math.round(d.total25/12))+'/mo'},
+    {l:'2024 Full Year',v:d.total24?fF(d.total24):'—',s:d.total24?fK(Math.round(d.total24/12))+'/mo':'not in data'},
+    {l:'YoY Change (YTD)',v:yoy!==null?sign+yoy+'%':'—',color:yoy>=0?'var(--neg)':'var(--pos)'},
+    {l:'2026 Run-Rate',v:fK(Math.round(d.total26/Math.max(ytdMon,1)*12)),s:'annualized'},
+  ].map(r=>`<div class="sr">
+    <div class="sr-l" style="${r.bold?'font-weight:500;color:var(--ink)':''}">${r.l}</div>
+    <div><span class="sr-v" style="color:${r.color||'var(--ink)'}">${r.v}</span><span class="sr-s">${r.s||''}</span></div>
+  </div>`).join('');
+
+  // YTD cumulative
+  const labels26=d.months26, ytdC26=[], ytdC25=[];
+  let c26=0,c25=0;
+  for(let i=0;i<ytdMon;i++){c26+=d.mon26[i]||0;ytdC26.push(Math.round(c26));c25+=d.mon25[i]||0;ytdC25.push(Math.round(c25));}
+  mk('c-ytd',{type:'line',data:{labels:labels26,datasets:[
+    {label:'2026',data:ytdC26.map(v=>Math.round(v/1000)),borderColor:ACCENT,backgroundColor:'rgba(91,79,224,.07)',fill:true,tension:.4,pointRadius:4,pointBackgroundColor:ACCENT,borderWidth:2.5},
+    {label:'2025 same period',data:ytdC25.map(v=>Math.round(v/1000)),borderColor:'rgba(0,0,0,.2)',backgroundColor:'transparent',fill:false,tension:.4,pointRadius:3,borderWidth:1.5,borderDash:[3,3]},
+  ]},options:{...bo(v=>'$'+v+'K'),plugins:{legend:{display:false},tooltip:{...TT,callbacks:{label:c=>`${c.dataset.label}: $${(c.raw*1000).toLocaleString()}`}}}}});
+
+  // Main trend — all months labeled Jan–Dec for 2025, then Jan–Mar for 2026
+  const allLabels=[...MON.map(m=>m+" '25"), ...d.months26.map(m=>m+" '26")];
+  const data25=[...d.mon25.map(v=>Math.round(v/1000)),...Array(ytdMon).fill(0)];
+  const data26=[...Array(12).fill(0),...d.mon26.map(v=>Math.round(v/1000))];
+  mk('c-trend',{type:'bar',data:{labels:allLabels,datasets:[
+    {label:'2025',data:data25,backgroundColor:'rgba(0,0,0,.14)',borderRadius:3,borderSkipped:false,barPercentage:.9,categoryPercentage:.85},
+    {label:'2026',data:data26,backgroundColor:ACCENT_M,borderRadius:3,borderSkipped:false,barPercentage:.9,categoryPercentage:.85},
+  ]},options:{...dlCfg({display:ctx=>ctx.dataset.data[ctx.dataIndex]>0?'auto':false,size:8,fmt:v=>v>0?'$'+(v>=1000?(v/1000).toFixed(1)+'M':v+'K'):null}),
+    ...bo(v=>v>=1000?'$'+(v/1000).toFixed(0)+'M':'$'+v+'K'),
+    plugins:{legend:{display:false},tooltip:{...TT,callbacks:{
+      label:c=>c.raw>0?`${c.dataset.label}: $${(c.raw*1000).toLocaleString()}`:null,
+      afterBody:ctx=>{
+        const vals=ctx.filter(c=>c.raw>0);
+        if(vals.length===2)return[`Combined: $${((vals[0].raw+vals[1].raw)*1000).toLocaleString()}`];
+        return[];
+      }
+    }}},
+    scales:{
+      x:{grid:{color:GC,drawTicks:false},ticks:{color:TC,font:{size:9,family:'DM Mono'},maxRotation:90,minRotation:90,autoSkip:false,padding:6},border:{display:false}},
+      y:{grid:{color:GC,drawTicks:false},ticks:{color:TC,font:{size:10,family:'DM Mono'},callback:v=>v>=1000?'$'+(v/1000).toFixed(0)+'M':'$'+v+'K',padding:8},border:{display:false}}
+    }
+  }});
+
+  // MoM change (2025 sequential)
+  const momL=[],momV=[];
+  d.mon25.forEach((v,i)=>{if(i>0&&d.mon25[i-1]>0){momL.push(MON[i]);momV.push(+(((v-d.mon25[i-1])/d.mon25[i-1])*100).toFixed(1));}});
+  mk('c-mom',{type:'bar',data:{labels:momL,datasets:[{data:momV,backgroundColor:momV.map(v=>v>=0?'rgba(192,57,43,.6)':'rgba(26,122,74,.6)'),borderRadius:3,barPercentage:.85,categoryPercentage:.9}]},
+    options:{...dlCfg({display:'auto',size:9,fmt:v=>(v>=0?'+':'')+v+'%'}),...bo(v=>(v>=0?'+':'')+v+'%'),plugins:{legend:{display:false},tooltip:{...TT,callbacks:{label:c=>`${c.raw>=0?'↑ +':'↓ '}${Math.abs(c.raw)}% vs prior month`}}}}});
+
+  // Source trend (stacked)
+  document.getElementById('src-trend-leg').innerHTML=d.srcNames.map((n,i)=>`<div class="li"><span class="ld" style="background:${d.srcColors[i]}"></span>${n.split(' ')[0]}</div>`).join('');
+  const srcAllLabels=[...MON.map(m=>m+"'25"),...d.months26.map(m=>m+"'26")];
+  mk('c-src-trend',{type:'bar',data:{labels:srcAllLabels,datasets:d.srcNames.map((name,si)=>({
+    label:name,
+    data:[...d.src25[si].map(v=>Math.round(v/1000)),...(()=>{const r=[];for(let i=0;i<ytdMon;i++)r.push(Math.round(d.srcTot26[si]/ytdMon/1000));return r;})()],
+    backgroundColor:d.srcColors[si]+'bb',borderWidth:0,stack:'s',borderRadius:0,
+  }))},options:{
+    ...bo(v=>'$'+v+'K'),
+    scales:{x:{stacked:true,grid:{color:GC,drawTicks:false},ticks:{color:TC,font:{size:8,family:'DM Mono'},maxRotation:45,autoSkip:true,maxTicksLimit:18},border:{display:false}},y:{stacked:true,grid:{color:GC,drawTicks:false},ticks:{color:TC,font:{size:9,family:'DM Mono'},callback:v=>'$'+v+'K'},border:{display:false}}},
+    plugins:{legend:{display:false},tooltip:{...TT,mode:'index',intersect:false,callbacks:{label:c=>c.raw>0?`${c.dataset.label}: $${(c.raw*1000).toLocaleString()}`:null}}}
+  }});
+}
+
+// ── SOURCES ───────────────────────────────────────────────────────────────────
+function buildSources(d){
+  function srcList(id, tots, total){
+    const maxT=Math.max(...tots);
+    document.getElementById(id).innerHTML=d.srcNames.map((name,i)=>{
+      const pct=Math.round(tots[i]/total*100);
+      return`<div class="src-item">
+        <div class="src-sw" style="background:${d.srcColors[i]}"></div>
+        <div class="src-b">
+          <div class="src-top"><div class="src-n">${name}</div><div class="src-p">${pct}%</div></div>
+          <div class="src-a">${fF(tots[i])}</div>
+          <div class="src-bar"><div class="src-bf" style="width:${Math.round(tots[i]/maxT*100)}%;background:${d.srcColors[i]}"></div></div>
+        </div>
+      </div>`;
+    }).join('');
+  }
+  srcList('src-list-25', d.srcTot25, d.total25);
+  srcList('src-list-26', d.srcTot26, d.total26);
+
+  // Source shift bar
+  const shifts=d.srcNames.map((_,i)=>{
+    const pct25=d.srcTot25[i]/d.total25*100, pct26=d.srcTot26[i]/d.total26*100;
+    return +(pct26-pct25).toFixed(1);
+  });
+  mk('c-src-shift',{type:'bar',data:{labels:d.srcNames.map(n=>n.split(' ')[0]),datasets:[{data:shifts,backgroundColor:shifts.map(v=>v>=0?'rgba(91,79,224,.6)':'rgba(192,57,43,.6)'),borderRadius:3,barPercentage:.85,categoryPercentage:.9}]},
+    options:{...dlCfg({display:'auto',size:9,fmt:v=>(v>=0?'+':'')+v+'pp'}),...bo(v=>(v>=0?'+':'')+v+'pp'),plugins:{legend:{display:false},tooltip:{...TT,callbacks:{label:c=>`${c.raw>=0?'↑ +':'↓ '}${Math.abs(c.raw)}pp share shift`}}}}});
+}
+
+// ── CATEGORY & VENDOR ─────────────────────────────────────────────────────────
+function buildCategoryVendor(d){
+  const total25=d.total25||1;
+  const cats=d.cats, maxC=cats[0]?.y25||1;
+
+  // Grouped bar 2025 vs 2026
+  mk('c-cat',{type:'bar',data:{
+    labels:cats.map(c=>c.cat.length>16?c.cat.slice(0,14)+'…':c.cat),
+    datasets:[
+      {label:'2025',data:cats.map(c=>Math.round(c.y25/1000)),backgroundColor:'rgba(0,0,0,.15)',borderRadius:3,barPercentage:.85,categoryPercentage:.8},
+      {label:'2026',data:cats.map(c=>Math.round(c.y26/1000)),backgroundColor:ACCENT_M,borderRadius:3,barPercentage:.85,categoryPercentage:.8},
+    ]
+  },options:{
+    ...dlCfg({display:ctx=>ctx.dataset.data[ctx.dataIndex]>0?'auto':false,anchor:'end',align:'end',size:8,fmt:v=>v>0?'$'+v+'K':null}),
+    ...bo(v=>'$'+v+'K'),
+    indexAxis:'y',
+    plugins:{
+      legend:{display:false},
+      tooltip:{
+        ...TT,
+        mode:'nearest',        // show ONLY the bar directly under cursor
+        intersect:true,         // must be hovering the bar itself
+        callbacks:{
+          title: ctx => {
+            if(!ctx.length) return '';
+            const cat = cats[ctx[0].dataIndex];
+            return cat ? cat.cat : '';
+          },
+          label: c => `${c.dataset.label}: $${(c.raw*1000).toLocaleString()}`,
+          afterLabel: c => {
+            const cat = cats[c.dataIndex];
+            if(!cat) return '';
+            const share = (cat.y25/total25*100).toFixed(1);
+            if(c.dataset.label==='2025') return `Share of 2025 total: ${share}%`;
+            if(cat.y25>0 && cat.y26>0){
+              const delta = pd(cat.y26, cat.y25/12*((d.months26||[]).length||3));
+              return delta!==null ? `vs same period 2025: ${delta>=0?'+':''}${delta}%` : '';
+            }
+            return '';
+          }
+        }
+      }
+    },
+    scales:{x:{grid:{color:GC,drawTicks:false},ticks:{color:TC,font:{size:9,family:'DM Mono'},callback:v=>'$'+v+'K'},border:{display:false}},y:{grid:{display:false},ticks:{color:TC,font:{size:10,family:'DM Mono'},autoSkip:false,padding:4},border:{display:false}}}
+  }});
+
+  // YoY growth horizontal
+  const catsWithPY=cats.filter(c=>c.y26>0);
+  const catGrowth=catsWithPY.map(c=>pd(c.y26,c.y25/12*3));
+  mk('c-cat-yoy',{type:'bar',data:{
+    labels:catsWithPY.map(c=>c.cat.length>16?c.cat.slice(0,14)+'…':c.cat),
+    datasets:[{data:catGrowth,backgroundColor:catGrowth.map(v=>v!=null&&v>=0?'rgba(192,57,43,.6)':'rgba(26,122,74,.6)'),borderRadius:3,barPercentage:.75,categoryPercentage:.9}]
+  },options:{...dlCfg({display:'auto',size:9,fmt:v=>v!=null?(v>=0?'+':'')+v+'%':null,anchor:'end',align:'end'}),...bo(v=>(v>=0?'+':'')+v+'%'),indexAxis:'y',
+    plugins:{legend:{display:false},tooltip:{...TT,callbacks:{label:c=>{const cat=catsWithPY[c.dataIndex];return[`${c.raw>=0?'↑ +':'↓ '}${Math.abs(c.raw)}% YoY`,`2026 YTD: $${Math.round(cat.y26).toLocaleString()}`,`2025 same period: $${Math.round(cat.y25/12*3).toLocaleString()}`];}}}},
+    scales:{x:{grid:{color:GC,drawTicks:false},ticks:{color:TC,font:{size:9,family:'DM Mono'},callback:v=>(v>=0?'+':'')+v+'%'},border:{display:false}},y:{grid:{display:false},ticks:{color:TC,font:{size:10,family:'DM Mono'},autoSkip:false,padding:4},border:{display:false}}}}});
+
+  // Category table
+  document.getElementById('cat-tbody').innerHTML=cats.map((c,i)=>{
+    const delta=pd(c.y26,c.y25/12*3), invs=Math.max(1,Math.round(c.y25/9500));
+    const dCl=delta===null?'neu':delta>=0?'pos':'neg';
+    return`<tr>
+      <td><span style="font-family:var(--fm);font-size:10px;color:var(--ink30)">${String(i+1).padStart(2,'0')}</span></td>
+      <td><div style="display:flex;align-items:center;gap:7px"><div style="width:3px;height:12px;border-radius:1px;background:${PAL[i]};flex-shrink:0"></div><span style="font-weight:500">${c.cat}</span></div>
+        <div class="tbl-bar"><div class="tbl-bf" style="width:${Math.round(c.y25/maxC*100)}%;background:${PAL[i]}"></div></div></td>
+      <td style="text-align:right;font-weight:600">${c.y26?fF(c.y26):'—'}</td>
+      <td style="text-align:right">${fF(c.y25)}</td>
+      <td style="text-align:right"><span class="chip ${dCl}">${delta!==null?(delta>=0?'+':'')+delta+'%':'—'}</span></td>
+      <td style="font-family:var(--fm);font-size:11px;text-align:right;color:var(--accent)">${(c.y25/total25*100).toFixed(1)}%</td>
+      <td style="text-align:right">${invs.toLocaleString()}</td>
+      <td style="text-align:right">$${Math.round(c.y25/invs).toLocaleString()}</td>
+    </tr>`;
+  }).join('');
+
+  // Vendor rows
+  const top20=d.vendors.slice(0,20), maxV=top20[0]?.y25||1;
+  document.getElementById('vbar-list').innerHTML=top20.map((v,i)=>{
+    const delta=pd(v.y26,v.y25/12*3), sign=delta>=0?'+':'', dCl=delta>=0?'pos':'neg';
+    return`<div class="vr">
+      <span class="vr-rank">${String(i+1).padStart(2,'0')}</span>
+      <span class="vr-name" title="${v.name}">${v.name}</span>
+      <div class="vr-bw"><div class="vr-bf" style="width:${Math.round(v.y25/maxV*100)}%"></div></div>
+      <span class="vr-amt">${fK(v.y25)}</span>
+      <span class="vr-d ${dCl}">${delta!==null?sign+delta+'%':'n/a'}</span>
+      <div class="vtip">
+        <div class="vtip-n">${v.name}</div>
+        <div class="vtip-amt">${fF(v.y25)}</div>
+        <div class="vtip-r"><span class="vtip-l">2026 YTD</span><span class="vtip-v">${v.y26?fF(v.y26):'—'}</span></div>
+        <div class="vtip-r"><span class="vtip-l">YoY vs same period</span><span class="vtip-v" style="color:${delta>=0?'#f87171':'#6ee7b7'}">${delta!==null?sign+delta+'%':'—'}</span></div>
+        <div class="vtip-r"><span class="vtip-l">Category</span><span class="vtip-v">${v.cat}</span></div>
+        <div class="vtip-r"><span class="vtip-l">Source</span><span class="vtip-v">${v.src}</span></div>
+      </div>
+    </div>`;
+  }).join('');
+
+  // Pareto
+  const top15=d.vendors.slice(0,15); let cum=0;
+  const paretoBar=[], paretoLine=[];
+  top15.forEach(v=>{cum+=v.y25;paretoBar.push(Math.round(v.y25/1000));paretoLine.push(Math.round(cum/total25*100));});
+  mk('c-pareto',{type:'bar',data:{
+    labels:top15.map(v=>v.name.length>9?v.name.slice(0,8)+'…':v.name),
+    datasets:[
+      {type:'bar',data:paretoBar,backgroundColor:ACCENT_M,borderRadius:3,barPercentage:.85,categoryPercentage:.9,yAxisID:'y',label:'$K'},
+      {type:'line',data:paretoLine,borderColor:NEG,backgroundColor:'transparent',pointRadius:3,pointBackgroundColor:NEG,borderWidth:2,tension:.1,yAxisID:'y2',label:'%'},
+    ]
+  },options:{responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{display:false},tooltip:{...TT,mode:'index',intersect:false,callbacks:{label:c=>c.yAxisID==='y'?`$${(c.raw*1000).toLocaleString()}`:`Cumulative: ${c.raw}%`}}},
+    scales:{x:{grid:{color:GC,drawTicks:false},ticks:{color:TC,font:{size:8,family:'DM Mono'},maxRotation:35},border:{display:false}},
+      y:{grid:{color:GC,drawTicks:false},ticks:{color:TC,font:{size:8,family:'DM Mono'},callback:v=>'$'+v+'K'},position:'left',border:{display:false}},
+      y2:{position:'right',grid:{display:false},ticks:{color:NEG,font:{size:8,family:'DM Mono'},callback:v=>v+'%'},border:{display:false}}}}});
+
+  // Vendor concentration bars
+  const top8=d.vendors.slice(0,8);
+  document.getElementById('vc-detail').innerHTML=top8.map((v,i)=>`
+    <div class="vc-row">
+      <div class="vc-top"><div class="vc-name">${v.name}</div><div class="vc-pct">${(v.y25/total25*100).toFixed(1)}%</div></div>
+      <div class="vc-mid">
+        <div class="vc-track"><div class="vc-fill" style="width:${Math.round(v.y25/top8[0].y25*100)}%;background:${PAL[i]}"></div></div>
+        <div class="vc-amt">${fF(v.y25)}</div>
+      </div>
+    </div>`).join('');
+}
+
+// ── CATEGORY BREAKDOWN (Filter Buckets) ──────────────────────────────────────
+function buildCatBucket(d){
+  // Use the full top-10 from _top10Cats (the filter pills) —
+  // always show all 10 buckets regardless of current exclusions,
+  // so users can see what each excluded category is worth
+  const source   = _top10Cats.length ? _top10Cats : d.cats.slice(0,10).map((c,i)=>({cat:c.cat,y25:c.y25,y26:c.y26,color:PAL[i]}));
+  const cats     = source;
+  const total25  = cats.reduce((s,c)=>s+c.y25,0) || 1;
+  const total26  = cats.reduce((s,c)=>s+c.y26,0);
+  const maxAmt   = Math.max(...cats.map(c=>c.y25));
+  const ytdMon   = (d.months26||[]).length || 3;
+  const fF2      = v => '$'+Math.round(v).toLocaleString();
+  const fK2      = v => v>=1e6?'$'+(v/1e6).toFixed(1)+'M':v>=1000?'$'+(v/1000).toFixed(0)+'K':'$'+Math.round(v);
+  const excl     = _excludedCats || new Set();
+
+  // ── Grouped vertical bar chart ─────────────────────────────────────────────
+  mk('c-catbucket', {
+    type: 'bar',
+    data: {
+      labels: cats.map(c => c.cat),
+      datasets: [
+        {
+          label: '2025',
+          data: cats.map(c => Math.round(c.y25 / 1000)),
+          backgroundColor: cats.map(c => excl.has(c.cat) ? 'rgba(0,0,0,.06)' : 'rgba(0,0,0,.15)'),
+          borderColor:     cats.map(c => excl.has(c.cat) ? 'rgba(0,0,0,.1)' : 'transparent'),
+          borderWidth:     cats.map(c => excl.has(c.cat) ? 1 : 0),
+          borderRadius: 4, borderSkipped: false, barPercentage: .82, categoryPercentage: .72,
+        },
+        {
+          label: '2026 YTD',
+          data: cats.map(c => Math.round(c.y26 / 1000)),
+          backgroundColor: cats.map(c => excl.has(c.cat) ? 'rgba(91,79,224,.12)' : ACCENT_M),
+          borderColor:     cats.map(c => excl.has(c.cat) ? 'rgba(91,79,224,.2)' : 'transparent'),
+          borderWidth:     cats.map(c => excl.has(c.cat) ? 1 : 0),
+          borderRadius: 4, borderSkipped: false, barPercentage: .82, categoryPercentage: .72,
+        }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        datalabels: typeof ChartDataLabels !== 'undefined' ? {
+          display: ctx => ctx.dataset.data[ctx.dataIndex] > 0,
+          anchor: 'end', align: 'end', clamp: true, clip: false,
+          color: ctx => excl.has(cats[ctx.dataIndex]?.cat) ? 'rgba(0,0,0,.25)' : 'rgba(0,0,0,.5)',
+          font: { family: 'DM Mono', size: 9, weight: '500' },
+          formatter: v => v > 0 ? fK2(v * 1000) : null,
+        } : false,
+        tooltip: {
+          ...TT, mode: 'index', intersect: false,
+          callbacks: {
+            title: ctx => {
+              const cat = cats[ctx[0]?.dataIndex];
+              return cat ? cat.cat + (excl.has(cat.cat) ? ' [EXCLUDED]' : '') : '';
+            },
+            label: c => c.raw > 0 ? `${c.dataset.label}: ${fF2(c.raw * 1000)}` : null,
+            afterBody: ctx => {
+              const cat = cats[ctx[0]?.dataIndex];
+              if(!cat) return [];
+              const share = (cat.y25 / total25 * 100).toFixed(1);
+              const delta = cat.y25 > 0 && cat.y26 > 0
+                ? ((cat.y26 - cat.y25/12*ytdMon) / (cat.y25/12*ytdMon) * 100).toFixed(1)
+                : null;
+              const lines = [`Share of 2025 total: ${share}%`];
+              if(delta) lines.push(`YoY vs same period: ${delta >= 0 ? '+' : ''}${delta}%`);
+              if(excl.has(cat.cat)) lines.push('⚠ Currently excluded from dashboard');
+              return lines;
+            }
+          }
+        }
+      },
+      scales: {
+        x: {
+          grid: { color: GC, drawTicks: false },
+          ticks: {
+            color: TC, font: { size: 10, family: 'DM Sans', weight: '500' },
+            maxRotation: 90, minRotation: 90, autoSkip: false, padding: 6,
+            callback: (val, i) => {
+              const name = cats[i]?.cat || '';
+              return excl.has(name) ? '⊘ ' + (name.length > 14 ? name.slice(0,13)+'…' : name) : (name.length > 14 ? name.slice(0,13)+'…' : name);
+            }
+          },
+          border: { display: false },
+        },
+        y: {
+          grid: { color: GC, drawTicks: false },
+          ticks: {
+            color: TC, font: { size: 10, family: 'DM Mono' },
+            callback: v => v >= 1000 ? '$'+(v/1000).toFixed(0)+'M' : '$'+v+'K',
+            padding: 8,
+          },
+          border: { display: false },
+        }
+      },
+      layout: { padding: { top: 24, bottom: 8 } }
+    }
+  });
+
+  // ── Donut — 2025 share of wallet ─────────────────────────────────────────
+  mk('c-catdonut', {
+    type: 'doughnut',
+    data: {
+      labels: cats.map(c => c.cat),
+      datasets: [{
+        data: cats.map(c => Math.round(c.y25)),
+        backgroundColor: cats.map(c => excl.has(c.cat) ? 'rgba(0,0,0,.07)' : c.color),
+        borderWidth: 2,
+        borderColor: '#fff',
+        hoverOffset: 6,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      cutout: '60%',
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          ...TT,
+          callbacks: {
+            title: ctx => cats[ctx[0]?.dataIndex]?.cat || '',
+            label: c => {
+              const cat = cats[c.dataIndex];
+              const share25 = (cat.y25 / total25 * 100).toFixed(1);
+              const total26all = cats.reduce((s,x)=>s+x.y26,0)||1;
+              const share26 = cat.y26 ? (cat.y26 / total26all * 100).toFixed(1) : null;
+              const ytdMon = (d.months26||[]).length || 3;
+              const sameP25 = Math.round(cat.y25 / 12 * ytdMon);
+              const delta = sameP25 > 0 && cat.y26 > 0 ? (((cat.y26 - sameP25) / sameP25)*100).toFixed(1) : null;
+              const tag = excl.has(cat.cat) ? ' [excluded]' : '';
+              const lines = [
+                `2025 Full Year: ${fF2(cat.y25)} (${share25}% of total)`,
+                cat.y26 ? `2026 YTD: ${fF2(cat.y26)}${share26?' ('+share26+'% of YTD total)':''}` : '2026 YTD: —',
+                delta !== null ? `vs same period 2025: ${delta>=0?'+':''}${delta}%` : '',
+              ].filter(Boolean);
+              if(tag) lines.push('⊘ Excluded from dashboard');
+              return lines;
+            }
+          }
+        }
+      }
+    }
+  });
+
+  // ── Donut legend ──────────────────────────────────────────────────────────
+  const legendEl = document.getElementById('catbucket-legend');
+  if(legendEl){
+    legendEl.innerHTML = cats.map((c,i) => {
+      const pct   = (c.y25 / total25 * 100).toFixed(1);
+      const isEx  = excl.has(c.cat);
+      return `<div style="display:flex;align-items:center;gap:6px;opacity:${isEx?'.4':'1'}">
+        <div style="width:8px;height:8px;border-radius:2px;background:${c.color};flex-shrink:0"></div>
+        <span style="font-size:11px;font-weight:500;color:var(--ink);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${c.cat}${isEx?' ⊘':''}</span>
+        <span style="font-family:var(--fm);font-size:10px;color:var(--ink60);white-space:nowrap">${pct}%</span>
+      </div>`;
+    }).join('');
+  }
+
+  // ── Monthly chart + table ───────────────────────────────────────────────────
+  buildCatMonthly(d, cats, excl, fF2, fK2, ytdMon);
+
+  // ── Detail table ─────────────────────────────────────────────────────────
+  const tbody = document.getElementById('catbucket-tbody');
+  const tfoot = document.getElementById('catbucket-tfoot');
+  if(!tbody) return;
+
+  tbody.innerHTML = cats.map((c, i) => {
+    const isEx    = excl.has(c.cat);
+    const share   = (c.y25 / total25 * 100).toFixed(1);
+    const sp25    = c.y25 / 12 * ytdMon;
+    const delta   = sp25 > 0 && c.y26 > 0 ? ((c.y26 - sp25) / sp25 * 100).toFixed(1) : null;
+    const dSign   = delta !== null ? (parseFloat(delta) >= 0 ? '+' : '') : '';
+    const dCls    = delta === null ? 'neu' : parseFloat(delta) >= 0 ? 'pos' : 'neg';
+    const barPct  = Math.round(c.y25 / maxAmt * 100);
+    const rowStyle= isEx ? 'opacity:.45;' : '';
+    return `<tr style="${rowStyle}">
+      <td><div style="width:10px;height:10px;border-radius:2px;background:${isEx?'#ccc':c.color}"></div></td>
+      <td style="font-weight:${isEx?'400':'600'};color:${isEx?'var(--ink60)':'var(--ink)'}">${c.cat}${isEx?' <span style="font-family:var(--fm);font-size:9px;color:var(--ink30);letter-spacing:.06em"> EXCLUDED</span>':''}</td>
+      <td style="font-family:var(--fm);font-size:12px;text-align:right;font-weight:700;color:var(--accent)">${c.y26 ? fF2(c.y26) : '—'}</td>
+      <td style="font-family:var(--fm);font-size:12px;text-align:right;">${fF2(c.y25)}</td>
+      <td style="text-align:right"><span class="chip ${dCls}">${delta !== null ? dSign + delta + '%' : '—'}</span></td>
+      <td style="font-family:var(--fm);font-size:11px;text-align:right;color:var(--accent)">${share}%</td>
+      <td style="padding-right:12px">
+        <div style="height:6px;background:var(--rule);border-radius:3px;overflow:hidden">
+          <div style="height:6px;border-radius:3px;width:${barPct}%;background:${isEx?'#ccc':c.color};opacity:${isEx?.4:1}"></div>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+
+  // Totals footer — only sum INCLUDED (non-excluded) categories
+  if(tfoot){
+    const included  = cats.filter(c => !excl.has(c.cat));
+    const excluded  = cats.filter(c =>  excl.has(c.cat));
+    const incl25    = included.reduce((s,c)=>s+c.y25, 0);
+    const incl26    = included.reduce((s,c)=>s+c.y26, 0);
+    const excl25    = excluded.reduce((s,c)=>s+c.y25, 0);
+    const exclNote  = excluded.length > 0
+      ? `<div style="font-family:var(--fm);font-size:10px;color:var(--ink30);margin-top:3px">${excluded.length} categor${excluded.length>1?'ies':'y'} excluded · ${fF2(excl25)} removed</div>`
+      : '';
+    const inclShare = cats.length > 0 ? (incl25 / total25 * 100).toFixed(1) : '100.0';
+
+    tfoot.innerHTML = `<tr style="border-top:2px solid var(--ink);background:var(--ink04)">
+      <td style="padding:10px 6px 8px"></td>
+      <td style="padding:10px 6px 8px">
+        <div style="font-family:var(--fd);font-size:12px;font-weight:700;color:var(--ink)">
+          ${excluded.length > 0 ? `Included Total (${included.length} of ${cats.length})` : `Total (${cats.length} categories)`}
+        </div>
+        ${exclNote}
+      </td>
+      <td style="font-family:var(--fm);font-size:13px;font-weight:700;text-align:right;padding:10px 6px 8px;color:var(--accent)">${incl26 ? fF2(incl26) : '—'}</td>
+      <td style="font-family:var(--fm);font-size:13px;font-weight:700;text-align:right;padding:10px 6px 8px;color:var(--ink)">${fF2(incl25)}</td>
+      <td style="padding:10px 6px 8px"></td>
+      <td style="font-family:var(--fm);font-size:11px;font-weight:700;text-align:right;padding:10px 6px 8px;color:var(--accent)">${inclShare}%</td>
+      <td style="padding:10px 6px 8px"></td>
+    </tr>`;
+  }
+}
+
+
+// ── CATEGORY MONTHLY SPEND ────────────────────────────────────────────────────
+function buildCatMonthly(d, cats, excl, fF2, fK2, ytdMon){
+  // We need raw monthly data per category.
+  // Build from _rawRows if available; otherwise fall back to proportional estimate
+  const MON_FULL = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const last26 = (d.months26||[]).length || ytdMon || 4; // months of 2026 we have
+
+  // Build running label list: Jan 25 … Dec 25, Jan 26 … Apr 26
+  const colLabels = [
+    ...MON_FULL.map(m => m+" '25"),
+    ...MON_FULL.slice(0, last26).map(m => m+" '26"),
+  ];
+
+  // Per-category monthly arrays [12 months 2025 + last26 months 2026]
+  const catMonthly = {}; // cat -> array of (12+last26) values
+  cats.forEach(c => { catMonthly[c.cat] = Array(12 + last26).fill(0); });
+
+  if(_rawRows && _rawRows.length){
+    function parseAmt(s){return Math.abs(parseFloat(String(s||'0').replace(/[$,\s]/g,'')));}
+    function parsePeriod(r){
+      if(r.paidYear&&r.paidMonth){
+        const yr=parseInt(r.paidYear);
+        const monRaw=String(r.paidMonth).trim();
+        const mon=isNaN(parseInt(monRaw))?new Date(monRaw+' 1 2000').getMonth():parseInt(monRaw)-1;
+        if(!isNaN(yr)&&mon>=0&&mon<=11)return{yr,mon};
+      }
+      if(r.invoiceDate){const dd=new Date(r.invoiceDate);if(!isNaN(dd.getTime()))return{yr:dd.getFullYear(),mon:dd.getMonth()};}
+      return null;
+    }
+    _rawRows.forEach(r=>{
+      const cat = r.category||'Uncategorized';
+      if(!catMonthly[cat]) return; // not in top-10
+      if(excl.has(cat)) return;
+      const p = parsePeriod(r); if(!p) return;
+      const {yr,mon} = p;
+      const amt = parseAmt(r.usdAmt); if(!amt||isNaN(amt)) return;
+      const valid = !/^(cancelled|canceled|void|voided|rejected|failed|declined|decline|draft|new)/i.test((r.status||'').toLowerCase());
+      if(!valid) return;
+      if(yr===2025) catMonthly[cat][mon] += amt;
+      else if(yr===2026 && mon < last26) catMonthly[cat][12 + mon] += amt;
+    });
+  } else {
+    // Fallback: estimate from annual totals
+    cats.forEach(c=>{
+      for(let m=0;m<12;m++) catMonthly[c.cat][m] = Math.round(c.y25/12);
+      for(let m=0;m<last26;m++) catMonthly[c.cat][12+m] = Math.round(c.y26/last26);
+    });
+  }
+
+  // ── Stacked bar chart ──────────────────────────────────────────────────────
+  const activeCats = cats.filter(c=>!excl.has(c.cat));
+  const datasets = activeCats.map((c,i)=>({
+    label: c.cat,
+    data: catMonthly[c.cat].map(v=>Math.round(v/1000)),
+    backgroundColor: c.color,
+    borderWidth: 0,
+    stack: 's',
+    borderRadius: 0,
+  }));
+
+  // Add a divider line at month 12 (2025→2026 boundary)
+  const maxMonthly = colLabels.map((_,ci)=>activeCats.reduce((s,c)=>s+(catMonthly[c.cat][ci]||0),0));
+  const maxVal = Math.max(...maxMonthly) / 1000;
+
+  mk('c-catmonth',{type:'bar',data:{labels:colLabels,datasets},options:{
+    responsive:true,maintainAspectRatio:false,
+    plugins:{
+      legend:{
+        display:true,position:'right',
+        labels:{font:{size:10,family:'DM Mono'},color:TC,boxWidth:10,boxHeight:10,padding:8,
+          filter: item => !excl.has(item.text)}
+      },
+      tooltip:{...TT,mode:'index',intersect:false,
+        callbacks:{
+          label:c=>c.raw>0?`${c.dataset.label}: $${(c.raw*1000).toLocaleString()}`:null,
+          afterBody:ctx=>{
+            const total=ctx.reduce((s,c)=>s+c.raw,0);
+            return total>0?[`Total: $${(total*1000).toLocaleString()}`]:[];
+          }
+        }
+      }
+    },
+    scales:{
+      x:{stacked:true,grid:{color:GC,drawTicks:false},
+         ticks:{color:TC,font:{size:9,family:'DM Mono'},maxRotation:90,minRotation:90,autoSkip:false},
+         border:{display:false}},
+      y:{stacked:true,grid:{color:GC,drawTicks:false},
+         ticks:{color:TC,font:{size:9,family:'DM Mono'},callback:v=>v>=1000?'$'+(v/1000).toFixed(0)+'M':'$'+v+'K'},
+         border:{display:false}}
+    },
+    layout:{padding:{top:8}}
+  }});
+
+  // ── Monthly table ─────────────────────────────────────────────────────────
+  const thead = document.getElementById('catmonth-thead');
+  const tbody = document.getElementById('catmonth-tbody');
+  const tfoot = document.getElementById('catmonth-tfoot');
+  if(!thead||!tbody) return;
+
+  // Header: Category | Jan '25 | Feb '25 | … | Dec '25 | Jan '26 | … | Apr '26 | Total
+  thead.innerHTML = '<tr>' +
+    '<th style="min-width:130px">Category</th>' +
+    colLabels.map(l=>`<th style="text-align:right;min-width:70px;font-size:9px">${l}</th>`).join('') +
+    '<th style="text-align:right;min-width:80px">Total</th>' +
+    '</tr>';
+
+  // Rows
+  tbody.innerHTML = cats.map((c,i)=>{
+    const isEx = excl.has(c.cat);
+    const total = catMonthly[c.cat].reduce((s,v)=>s+v,0);
+    const cells = catMonthly[c.cat].map(v=>
+      `<td style="text-align:right;font-family:var(--fm);font-size:11px;${v>0?'':'color:var(--ink30)'}">${v>0?fK2(v):'—'}</td>`
+    ).join('');
+    return `<tr style="opacity:${isEx?.4:1}">
+      <td style="font-size:12px;font-weight:${isEx?400:600};color:${isEx?'var(--ink60)':'var(--ink)'}">
+        <div style="display:flex;align-items:center;gap:6px">
+          <div style="width:8px;height:8px;border-radius:2px;background:${isEx?'#ccc':c.color};flex-shrink:0"></div>
+          ${c.cat}${isEx?' <span style="font-family:var(--fm);font-size:9px;color:var(--ink30)">EXCL</span>':''}
+        </div>
+      </td>
+      ${cells}
+      <td style="text-align:right;font-family:var(--fm);font-size:11px;font-weight:700;color:var(--accent)">${fF2(total)}</td>
+    </tr>`;
+  }).join('');
+
+  // Footer totals
+  if(tfoot){
+    const colTotals = colLabels.map((_,ci)=>cats.filter(c=>!excl.has(c.cat)).reduce((s,c)=>s+(catMonthly[c.cat][ci]||0),0));
+    const grandTotal = colTotals.reduce((s,v)=>s+v,0);
+    tfoot.innerHTML = `<tr style="border-top:2px solid var(--ink);background:var(--ink04)">
+      <td style="font-family:var(--fd);font-size:12px;font-weight:700;padding:8px 6px">Included Total</td>
+      ${colTotals.map(v=>`<td style="text-align:right;font-family:var(--fm);font-size:11px;font-weight:700;padding:8px 6px">${v>0?fK2(v):'—'}</td>`).join('')}
+      <td style="text-align:right;font-family:var(--fm);font-size:12px;font-weight:700;color:var(--accent);padding:8px 6px">${fF2(grandTotal)}</td>
+    </tr>`;
+  }
+}
+
+// ── CUSTOM VIEW ───────────────────────────────────────────────────────────────
+function buildCustomView(d){
+  const total25 = d.total25 || 1;
+  const cvs = d.cvs;
+  if(!cvs||!cvs.length) return;
+
+  // ── Vertical grouped bar (column chart) — much more readable than horizontal ──
+  const labels = cvs.map(c => c.name);
+
+  mk('c-cv', {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        {
+          label: '2025',
+          data: cvs.map(c => Math.round(c.y25 / 1000)),
+          backgroundColor: 'rgba(0,0,0,.13)',
+          borderRadius: 4,
+          borderSkipped: false,
+          barPercentage: .82,
+          categoryPercentage: .75,
+        },
+        {
+          label: '2026 YTD',
+          data: cvs.map(c => Math.round(c.y26 / 1000)),
+          backgroundColor: ACCENT_M,
+          borderRadius: 4,
+          borderSkipped: false,
+          barPercentage: .82,
+          categoryPercentage: .75,
+        },
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        datalabels: typeof ChartDataLabels !== 'undefined' ? {
+          display: ctx => ctx.dataset.data[ctx.dataIndex] > 0,
+          anchor: 'end',
+          align: 'end',
+          color: 'rgba(0,0,0,.5)',
+          font: { family: 'DM Mono', size: 9, weight: '500' },
+          formatter: v => v > 0 ? '$' + (v >= 1000 ? (v/1000).toFixed(1)+'M' : v + 'K') : null,
+          clamp: true,
+          clip: false,
+        } : false,
+        tooltip: {
+          ...TT,
+          mode: 'index',
+          intersect: false,
+          callbacks: {
+            label: c => c.raw > 0 ? `${c.dataset.label}: $${(c.raw * 1000).toLocaleString()}` : null,
+            afterBody: ctx => {
+              const vals = ctx.filter(c => c.raw > 0);
+              if (vals.length === 2) {
+                const delta = pd(vals[1].raw, vals[0].raw);
+                const sign  = delta >= 0 ? '+' : '';
+                return [`YoY: ${sign}${delta}% vs 2025`];
+              }
+              return [];
+            }
+          }
+        }
+      },
+      scales: {
+        x: {
+          grid: { color: GC, drawTicks: false },
+          ticks: {
+            color: TC,
+            font: { size: 10, family: 'DM Sans', weight: '500' },
+            maxRotation: 90,
+            minRotation: 90,
+            autoSkip: false,
+            padding: 6,
+          },
+          border: { display: false },
+        },
+        y: {
+          grid: { color: GC, drawTicks: false },
+          ticks: {
+            color: TC,
+            font: { size: 10, family: 'DM Mono' },
+            callback: v => '$' + (v >= 1000 ? (v/1000).toFixed(0) + 'M' : v + 'K'),
+            padding: 8,
+          },
+          border: { display: false },
+        }
+      },
+      layout: { padding: { top: 22, bottom: 8 } }
+    }
+  });
+
+  // ── Stat tiles — one per custom view, showing 2025, 2026, delta, share ────
+  const maxAmt = Math.max(...cvs.map(c => c.y25));
+  const tilesEl = document.getElementById('cv-tiles');
+  if (!tilesEl) return;
+  tilesEl.innerHTML = cvs.map((c, i) => {
+    const delta   = pd(c.y26, c.y25 / 12 * (d.months26 ? d.months26.length : 3));
+    const dSign   = delta !== null ? (delta >= 0 ? '+' : '') : '';
+    const dColor  = delta === null ? 'var(--ink30)' : delta >= 0 ? 'var(--neg)' : 'var(--pos)';
+    const barW    = Math.round(c.y25 / maxAmt * 100);
+    const share   = (c.y25 / total25 * 100).toFixed(1);
+    return `<div class="cv-tile">
+      <div class="cv-tile-name">
+        <div class="cv-tile-swatch" style="background:${PAL[i]}"></div>
+        ${c.name}
+      </div>
+      <div class="cv-tile-row">
+        <span class="cv-tile-yr">2025</span>
+        <span class="cv-tile-amt">${fF(c.y25)}</span>
+      </div>
+      <div class="cv-tile-bar"><div class="cv-tile-bar-fill" style="width:${barW}%;background:${PAL[i]}"></div></div>
+      <div class="cv-tile-row">
+        <span class="cv-tile-yr">2026 YTD</span>
+        <span class="cv-tile-amt" style="color:var(--accent)">${c.y26 ? fF(c.y26) : '—'}</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;margin-top:8px;padding-top:8px;border-top:1px solid var(--rule-lt)">
+        <span class="cv-tile-delta" style="color:${dColor}">${delta !== null ? dSign + delta + '% YoY' : '—'}</span>
+        <span class="cv-tile-share">${share}% of total</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── KPI SECTION ───────────────────────────────────────────────────────────────
+function buildKPISection(d){
+  const total25=d.total25||1;
+  const cc=d.currencyCounts||{USD:1};
+  const totalCC=Object.values(cc).reduce((a,b)=>a+b,0)||1;
+  const fxPct=Math.round((totalCC-(cc.USD||0))/totalCC*100);
+  const sc=d.statusCounts||{paid:1};
+  const stTotal=Object.values(sc).reduce((a,b)=>a+b,0)||1;
+  // "Invoices Paid" = everything EXCEPT void/rejected/declined/cancelled
+  const excludedFromPaid = (sc.cancelled||0) + (sc.void||0) + (sc.rejected||0) + (sc.declined||0) + (sc.failed||0);
+  const paidCount = stTotal - excludedFromPaid;
+  const paidPct = Math.round(paidCount / stTotal * 100);
+  const top5=d.vendors.slice(0,5).reduce((a,v)=>a+v.y25,0);
+  const concPct=Math.round(top5/total25*100);
+  const days=d.avgDaysToPay;
+
+  function rbSet(id,v,col,sid,s){
+    const el=document.getElementById(id);if(el){el.textContent=v;el.style.color=col;}
+    const se=document.getElementById(sid);if(se){se.textContent=s;se.style.color=col;}
+  }
+  rbSet('rb-conc',concPct+'%',concPct>=70?NEG:concPct>=50?AMB:POS,'rb-conc-s','Top 5 = '+fK(top5)+' of '+fK(total25));
+  rbSet('rb-days',days!=null?days+'d':'—',days==null?TC:days<=20?POS:days<=35?AMB:NEG,'rb-days-s',days==null?'No date data':days<=20?'On track':days<=35?'Acceptable':'Review needed');
+  rbSet('rb-fx',fxPct+'%',fxPct===0?POS:fxPct<15?AMB:NEG,'rb-fx-s',Object.keys(cc).filter(k=>k!=='USD').join(', ')||'USD only');
+  rbSet('rb-paid',paidPct+'%',paidPct>=90?POS:paidPct>=75?AMB:NEG,'rb-paid-s',
+    paidCount.toLocaleString()+' of '+stTotal.toLocaleString()+' invoices · '+(excludedFromPaid)+' void/rejected/declined');
+
+  // Cost per invoice — fix: use invoiceCountMonthly (correct field name)
+  const invCounts = d.invoiceCountMonthly || d.inv25 || Array(12).fill(0);
+  const cpiL=[], cpiV=[];
+  d.mon25.forEach((v,i)=>{if(v>0&&invCounts[i]>0){cpiL.push(MON[i]);cpiV.push(Math.round(v/invCounts[i]));}});
+  mk('c-cpi',{type:'line',data:{labels:cpiL,datasets:[{data:cpiV,borderColor:ACCENT,backgroundColor:'rgba(91,79,224,.07)',fill:true,tension:.4,pointRadius:3,pointBackgroundColor:ACCENT,borderWidth:2}]},
+    options:{...bo(v=>'$'+v.toLocaleString()),plugins:{legend:{display:false},tooltip:{...TT,callbacks:{label:c=>`$${c.raw.toLocaleString()} avg per invoice`}}}}});
+
+  // Invoice count vs spend dual
+  mk('c-inv-spend',{type:'bar',data:{labels:MON,datasets:[
+    {label:'Spend $K',data:d.mon25.map(v=>Math.round(v/1000)),backgroundColor:ACCENT_M,borderRadius:2,yAxisID:'y'},
+    {type:'line',label:'Invoices',data:invCounts,borderColor:AMB,backgroundColor:'transparent',pointRadius:2,pointBackgroundColor:AMB,borderWidth:1.5,tension:.4,yAxisID:'y2'},
+  ]},options:{...bo(v=>'$'+v+'K',v=>v+'i'),plugins:{legend:{display:false},tooltip:{...TT,mode:'index',intersect:false}}}});
+
+  // Status donut — show all buckets including scheduled, with USD amounts per status
+  const stLabels=Object.keys(sc).filter(k=>sc[k]>0);
+  const stVals=stLabels.map(k=>sc[k]);
+  const stColors={paid:POS, scheduled:'#2563eb', pending:AMB, cancelled:NEG, void:NEG, rejected:NEG, draft:'#9ca3af', failed:NEG};
+  const stCA=stLabels.map(l=>stColors[l.toLowerCase()]||'#9ca3af');
+
+  mk('c-status',{type:'doughnut',data:{
+    labels:stLabels.map(l=>l[0].toUpperCase()+l.slice(1)),
+    datasets:[{data:stVals,backgroundColor:stCA,borderWidth:2,borderColor:'#fafafa',hoverOffset:4}]
+  },options:{responsive:true,maintainAspectRatio:false,cutout:'65%',
+    plugins:{legend:{display:false},tooltip:{...TT,callbacks:{
+      label:ctx=>{
+        const pct=Math.round(ctx.raw/stTotal*100);
+        return `${ctx.label}: ${ctx.raw.toLocaleString()} inv (${pct}%)`;
+      }
+    }}}
+  }});
+
+  // Status list with count + % + clear label for what each bucket means
+  const stDesc={paid:'Paid / Completed',scheduled:'Scheduled / Approved',pending:'Pending / Open',cancelled:'Cancelled / Voided',draft:'Draft / Not submitted'};
+  document.getElementById('status-list').innerHTML=stLabels.map((l,i)=>`
+    <div class="srow"><div class="sdot" style="background:${stCA[i]}"></div>
+    <div class="sl" title="${stDesc[l.toLowerCase()]||l}">${l[0].toUpperCase()+l.slice(1)}</div>
+    <div class="sv">${stVals[i].toLocaleString()}</div>
+    <div class="sp">${Math.round(stVals[i]/stTotal*100)}%</div></div>`).join('');
+
+  // Status trend — include scheduled bucket
+  const sm=d.statusMonthly||{paid:Array(12).fill(0)};
+  mk('c-status-t',{type:'bar',data:{labels:MON,datasets:[
+    {label:'Paid',data:sm.paid||[],backgroundColor:'rgba(26,122,74,.55)',stack:'s',borderRadius:0},
+    {label:'Scheduled',data:sm.scheduled||[],backgroundColor:'rgba(37,99,235,.55)',stack:'s',borderRadius:0},
+    {label:'Pending',data:sm.pending||[],backgroundColor:'rgba(180,83,9,.55)',stack:'s',borderRadius:0},
+    {label:'Cancelled',data:sm.cancelled||[],backgroundColor:'rgba(192,57,43,.55)',stack:'s',borderRadius:2},
+  ]},options:{...bo(v=>v),scales:{
+    x:{stacked:true,grid:{color:GC,drawTicks:false},ticks:{color:TC,font:{size:8,family:'DM Mono'},maxRotation:0},border:{display:false}},
+    y:{stacked:true,grid:{color:GC,drawTicks:false},ticks:{color:TC,font:{size:8,family:'DM Mono'}},border:{display:false}}
+  },plugins:{legend:{display:false},tooltip:{...TT,mode:'index',intersect:false}}}});
+
+  // Days to pay
+  const da=d.avgDaysMonthly||Array(12).fill(0);
+  mk('c-days',{type:'bar',data:{labels:MON,datasets:[
+    {data:da,backgroundColor:da.map(v=>v<=20?'rgba(26,122,74,.55)':v<=35?'rgba(180,83,9,.55)':'rgba(192,57,43,.55)'),borderRadius:2},
+    {type:'line',data:Array(12).fill(30),borderColor:'rgba(192,57,43,.3)',backgroundColor:'transparent',pointRadius:0,borderWidth:1,borderDash:[3,3]},
+  ]},options:{...bo(v=>v+'d'),plugins:{legend:{display:false},tooltip:{...TT,callbacks:{label:c=>c.datasetIndex===0?c.raw+'d avg to pay':null}}}}});
+
+  // Currency rows
+  const sorted=Object.entries(cc).sort((a,b)=>b[1]-a[1]);
+  const maxCC=sorted[0][1];
+  document.getElementById('fx-rows').innerHTML=sorted.map(([code,count],i)=>`
+    <div style="display:flex;align-items:center;gap:10px;padding:.45rem 0;border-bottom:1px solid var(--rule-lt)">
+      <div style="font-family:var(--fm);font-size:11px;font-weight:500;width:36px;color:var(--ink)">${code}</div>
+      <div style="flex:1;height:3px;background:var(--rule);border-radius:2px">
+        <div style="height:3px;border-radius:2px;width:${Math.round(count/maxCC*100)}%;background:${code==='USD'?POS:PAL[i+1]||ACCENT}"></div>
+      </div>
+      <div style="font-family:var(--fm);font-size:10px;color:var(--ink60);width:50px;text-align:right">${count} inv</div>
+      <div style="font-family:var(--fm);font-size:10px;color:var(--ink30);width:32px;text-align:right">${Math.round(count/totalCC*100)}%</div>
+    </div>`).join('');
+}
+
+
+
+// ── GLOBAL STORED DATA (for downloads) ────────────────────────────────────────
+let _dashData = null;
+let _rawRows  = null; // store uploaded rows for full download
+
+// ── CHART DOWNLOAD FUNCTIONS ──────────────────────────────────────────────────
+function showCtxMenu(btn, chartId, name){
+  // Close all other menus first
+  document.querySelectorAll('.ctx-menu.open').forEach(m=>m.classList.remove('open'));
+  const menu = document.getElementById('menu-'+chartId);
+  if(menu){ menu.classList.toggle('open'); }
+  // Close on outside click
+  setTimeout(()=>document.addEventListener('click', function handler(){
+    document.querySelectorAll('.ctx-menu.open').forEach(m=>m.classList.remove('open'));
+    document.removeEventListener('click',handler);
+  }),50);
+}
+
+function dlChartCSV(chartId, chartName){
+  const chart = C[chartId]; if(!chart){ toast('Chart not found','err'); return; }
+  const labels = chart.data.labels||[];
+  const datasets = chart.data.datasets||[];
+  let csv = 'Label,' + datasets.map(ds=>ds.label||'Value').join(',') + '\n';
+  labels.forEach((lbl,i)=>{
+    const row = [lbl, ...datasets.map(ds=>ds.data[i]!=null?ds.data[i]:'')];
+    csv += row.join(',') + '\n';
+  });
+  const blob = new Blob([csv],{type:'text/csv'});
+  const a = document.createElement('a'); a.href=URL.createObjectURL(blob);
+  a.download = (chartName||chartId).replace(/\s+/g,'_')+'_data.csv'; a.click();
+  toast('Downloaded '+chartName+' data','ok');
+}
+
+function dlChartPNG(chartId, chartName){
+  const chart = C[chartId]; if(!chart){ toast('Chart not found','err'); return; }
+  const a = document.createElement('a'); a.href = chart.toBase64Image('image/png',1);
+  a.download = (chartName||chartId).replace(/\s+/g,'_')+'.png'; a.click();
+  toast('Downloaded '+chartName+' chart','ok');
+}
+
+function dlFullData(){
+  if(!_rawRows||!_rawRows.length){ toast('Upload a file first to download its data','err'); return; }
+  const keys = Object.keys(_rawRows[0]);
+  let csv = keys.join(',')+'\n';
+  _rawRows.forEach(r=>{ csv += keys.map(k=>'"'+(r[k]||'').toString().replace(/"/g,'""')+'"').join(',')+' \n'; });
+  const blob = new Blob([csv],{type:'text/csv'});
+  const a = document.createElement('a'); a.href=URL.createObjectURL(blob);
+  a.download = 'niural_expense_data.csv'; a.click();
+  toast('Downloading full dataset...','ok');
+}
+
+// ── CHARTJS DATALABELS REGISTRATION ───────────────────────────────────────────
+if(typeof ChartDataLabels !== 'undefined'){
+  Chart.register(ChartDataLabels);
+}
+
+// ── DATALABEL CONFIG HELPER ───────────────────────────────────────────────────
+function dlCfg(opts={}){
+  if(typeof ChartDataLabels === 'undefined') return {};
+  return {
+    datalabels:{
+      display: opts.display ?? 'auto',
+      anchor: opts.anchor ?? 'end',
+      align: opts.align ?? 'end',
+      color: opts.color ?? 'rgba(0,0,0,.55)',
+      font: {family:'DM Mono', size: opts.size ?? 9, weight:'500'},
+      formatter: opts.fmt ?? (v=>v>0?'$'+(v>=1000?(v/1000).toFixed(0)+'K':Math.round(v)):null),
+      padding: opts.padding ?? {top:1,bottom:1,left:2,right:2},
+      clip: false,
+    }
+  };
+}
+
+
+// ── DATA AUDIT ────────────────────────────────────────────────────────────────
+let _auditRows = [];
+let _auditFiltered = [];
+let _auditSortKey = 'usdAmt';
+let _auditSortDir = -1; // -1 = desc
+
+function openAudit(title, filterFn){
+  if(!_rawRows||!_rawRows.length){
+    toast('Upload a file first to audit its data','err'); return;
+  }
+  // Populate audit rows — normalised rows with both years
+  _auditRows = _rawRows.map(r=>{
+    const yr  = parseInt(r.paidYear)||0;
+    const mon = (() => {
+      const raw=String(r.paidMonth||'').trim();
+      return isNaN(parseInt(raw)) ? new Date(raw+' 1 2000').getMonth()+1 : parseInt(raw);
+    })();
+    return {
+      paidYear:  yr,
+      paidMonth: mon,
+      vendor:    r.vendor||'Unknown',
+      category:  r.category||'Uncategorized',
+      customView:r.customView||'',
+      source:    r.source||'',
+      status:    r.status||'',
+      usdAmt:    Math.abs(parseFloat(String(r.usdAmt||'0').replace(/[$,\s]/g,'')))||0,
+      currency:  r.currency||'USD',
+      invoiceId: r.invoiceId||r.invoiceNum||'',
+    };
+  }).filter(r=>r.paidYear>=2024&&r.paidYear<=2026);
+
+  document.getElementById('audit-title').textContent = title + ' — Data Audit';
+
+  // Populate filter dropdowns
+  const cats  = [...new Set(_auditRows.map(r=>r.category))].sort();
+  const srcs  = [...new Set(_auditRows.map(r=>r.source))].sort();
+  const catSel= document.getElementById('audit-cat-filter');
+  const srcSel= document.getElementById('audit-src-filter');
+  catSel.innerHTML = '<option value="">All Categories</option>' + cats.map(c=>`<option value="${c}">${c}</option>`).join('');
+  srcSel.innerHTML = '<option value="">All Sources</option>'    + srcs.map(s=>`<option value="${s}">${s}</option>`).join('');
+
+  // Reset filters
+  document.getElementById('audit-search').value='';
+  document.getElementById('audit-yr-filter').value='';
+  catSel.value=''; srcSel.value='';
+
+  document.getElementById('audit-overlay').classList.add('open');
+  filterAudit();
+}
+function closeAudit(){
+  document.getElementById('audit-overlay').classList.remove('open');
+}
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeAudit();});
+
+function filterAudit(){
+  const q    = document.getElementById('audit-search').value.toLowerCase();
+  const yr   = document.getElementById('audit-yr-filter').value;
+  const cat  = document.getElementById('audit-cat-filter').value;
+  const src  = document.getElementById('audit-src-filter').value;
+
+  _auditFiltered = _auditRows.filter(r=>{
+    if(yr  && String(r.paidYear)!==yr)  return false;
+    if(cat && r.category!==cat)          return false;
+    if(src && r.source!==src)            return false;
+    if(q){
+      const hay = [r.vendor,r.category,r.customView,r.source,r.status,r.invoiceId].join(' ').toLowerCase();
+      if(!hay.includes(q)) return false;
+    }
+    return true;
+  });
+
+  // Sort
+  _auditFiltered.sort((a,b)=>{
+    const av=a[_auditSortKey]??0, bv=b[_auditSortKey]??0;
+    return typeof av==='number' ? (av-bv)*_auditSortDir : String(av).localeCompare(String(bv))*_auditSortDir;
+  });
+
+  renderAuditTable();
+}
+
+function sortAudit(key){
+  if(_auditSortKey===key){ _auditSortDir*=-1; }
+  else { _auditSortKey=key; _auditSortDir=-1; }
+  document.querySelectorAll('.audit-tbl th').forEach(th=>{th.classList.remove('sort-asc','sort-desc');});
+  const idx={'paidYear':0,'paidMonth':1,'vendor':2,'category':3,'customView':4,'source':5,'status':6,'usdAmt':7,'currency':8};
+  const th = document.querySelectorAll('.audit-tbl th')[idx[key]];
+  if(th) th.classList.add(_auditSortDir===1?'sort-asc':'sort-desc');
+  filterAudit();
+}
+
+const MON_SHORT=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+function renderAuditTable(){
+  const total = _auditFiltered.reduce((s,r)=>s+r.usdAmt,0);
+  const count = _auditFiltered.length;
+  document.getElementById('audit-count').textContent =
+    count.toLocaleString()+' rows · $'+Math.round(total).toLocaleString()+' total';
+
+  const LIMIT = 500;
+  const rows  = _auditFiltered.slice(0,LIMIT);
+
+  const statusColor={paid:'var(--pos)',cancelled:'var(--neg)',void:'var(--neg)',pending:'var(--amb)',draft:'var(--ink30)'};
+
+  const tbody = document.getElementById('audit-tbody');
+  if(!rows.length){
+    tbody.innerHTML='';
+    document.getElementById('audit-empty').style.display='block';
+  } else {
+    document.getElementById('audit-empty').style.display='none';
+    tbody.innerHTML = rows.map(r=>{
+      const yrCls = r.paidYear===2026?'yr26':r.paidYear===2025?'':'yr25';
+      const monStr = r.paidMonth>=1&&r.paidMonth<=12 ? MON_SHORT[r.paidMonth-1] : r.paidMonth;
+      const stColor = statusColor[(r.status||'').toLowerCase()]||'var(--ink60)';
+      return `<tr>
+        <td class="${yrCls}" style="font-family:var(--fm);font-size:11px">${r.paidYear}</td>
+        <td style="font-family:var(--fm);font-size:11px">${monStr}</td>
+        <td style="font-weight:500;max-width:160px;overflow:hidden;text-overflow:ellipsis" title="${r.vendor}">${r.vendor}</td>
+        <td style="max-width:150px;overflow:hidden;text-overflow:ellipsis;font-size:11px" title="${r.category}">${r.category}</td>
+        <td style="max-width:120px;overflow:hidden;text-overflow:ellipsis;font-size:11px;color:var(--ink60)">${r.customView}</td>
+        <td style="font-size:11px;color:var(--ink60)">${r.source}</td>
+        <td class="chip-cell"><span style="background:${stColor}18;color:${stColor};font-family:var(--fm);font-size:10px;padding:2px 6px;border-radius:2px">${r.status}</span></td>
+        <td class="num" style="font-weight:600">$${Math.round(r.usdAmt).toLocaleString()}</td>
+        <td style="font-family:var(--fm);font-size:11px;color:var(--ink60)">${r.currency}</td>
+      </tr>`;
+    }).join('');
+    if(count>LIMIT) tbody.innerHTML += `<tr><td colspan="9" style="text-align:center;padding:10px;font-family:var(--fm);font-size:11px;color:var(--ink60)">Showing first ${LIMIT} of ${count.toLocaleString()} rows. Export CSV to see all.</td></tr>`;
+  }
+}
+
+function dlAuditCSV(){
+  if(!_auditFiltered.length){toast('No rows to export','err');return;}
+  const cols=['paidYear','paidMonth','vendor','category','customView','source','status','usdAmt','currency','invoiceId'];
+  const hdrs=['Paid Year','Paid Month','Vendor','Category','Custom View','Source','Status','USD Amount','Currency','Invoice ID'];
+  let csv = hdrs.join(',')+'\n';
+  _auditFiltered.forEach(r=>{
+    csv += cols.map(k=>'"'+(r[k]??'').toString().replace(/"/g,'""')+'"').join(',')+'\n';
+  });
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));
+  a.download='audit_export.csv';a.click();
+  toast('Exported '+_auditFiltered.length.toLocaleString()+' rows','ok');
+}
+
+
+// ── TABLE CSV DOWNLOAD ────────────────────────────────────────────────────────
+function dlTableCSV(tableId, filename){
+  const tbl = document.getElementById(tableId) || document.querySelector('#'+tableId+' table') || document.querySelector('table');
+  if(!tbl){ toast('Table not found','err'); return; }
+
+  const rows = [];
+
+  // Headers from thead
+  const thead = tbl.querySelector('thead');
+  if(thead){
+    const headerCells = [...thead.querySelectorAll('th')];
+    rows.push(headerCells.map(th => '"'+th.textContent.trim().replace(/"/g,'""')+'"').join(','));
+  }
+
+  // Body rows
+  const tbody = tbl.querySelector('tbody');
+  if(tbody){
+    [...tbody.querySelectorAll('tr')].forEach(tr=>{
+      const cells = [...tr.querySelectorAll('td')].map(td=>{
+        // Get text content, strip inline badges/spans cleanly
+        let txt = td.innerText || td.textContent || '';
+        txt = txt.replace(/\s+/g,' ').trim();
+        return '"'+txt.replace(/"/g,'""')+'"';
+      });
+      if(cells.length) rows.push(cells.join(','));
+    });
+  }
+
+  // Footer rows
+  const tfoot = tbl.querySelector('tfoot');
+  if(tfoot){
+    [...tfoot.querySelectorAll('tr')].forEach(tr=>{
+      const cells = [...tr.querySelectorAll('td')].map(td=>{
+        let txt = td.innerText || td.textContent || '';
+        txt = txt.replace(/\s+/g,' ').trim();
+        return '"'+txt.replace(/"/g,'""')+'"';
+      });
+      if(cells.some(c=>c.replace(/"/g,'').trim())) rows.push(cells.join(','));
+    });
+  }
+
+  if(rows.length < 2){ toast('Nothing to download','err'); return; }
+
+  const csv  = rows.join('\n');
+  const blob = new Blob([csv], {type:'text/csv'});
+  const a    = document.createElement('a');
+  a.href     = URL.createObjectURL(blob);
+  a.download = (filename||'table_data')+'_'+new Date().toISOString().slice(0,10)+'.csv';
+  a.click();
+  toast('Downloaded '+(rows.length-1)+' rows as CSV','ok');
+}
+
+// ── COLUMN MAP ────────────────────────────────────────────────────────────────
+// Exact column names from the uploaded file (case-insensitive exact match)
+const COL={
+  source:      ['source'],
+  createdAt:   ['created at'],
+  invoiceId:   ['invoice id'],
+  invoiceNum:  ['invoice number'],
+  invoiceDate: ['invoice date'],
+  schedDate:   ['scheduled pay date'],
+  paidYear:    ['paid year'],
+  paidMonth:   ['paid month'],
+  vendor:      ['vendor'],
+  customView:  ["ovi's custom view"],
+  department:  ['department'],
+  status:      ['status'],
+  currency:    ['currency'],               // exact: "Currency"
+  amtLocal:    ['amount (in local fx)'],   // exact: "Amount (in Local FX)"
+  usdAmt:      ['usd amount'],             // exact: "USD Amount"  ← primary value column
+  category:    ['summarized mapping'],     // exact: "Summarized Mapping"
+};
+// Match headers using lowercase trim — handles any casing in the file
+function findKey(headers,canonical){
+  return headers.find(h => COL[canonical].some(t => h.toLowerCase().trim() === t)) || null;
+}
+
+function parseExcelFile(ab){
+  const wb=XLSX.read(ab,{type:'array',cellDates:true}),ws=wb.Sheets[wb.SheetNames[0]];
+  const raw=XLSX.utils.sheet_to_json(ws,{raw:false,defval:''});
+  if(!raw.length)throw new Error('Excel sheet is empty.');
+  return normaliseRows(raw);
+}
+function parseCSVText(text){
+  const lines=text.trim().split(/\r?\n/).filter(l=>l.trim());
+  if(lines.length<2)throw new Error('File needs a header and at least one data row.');
+  const hdrs=lines[0].split(',').map(h=>h.trim().replace(/^"|"$/g,''));
+  const raw=lines.slice(1).map(line=>{
+    const cells=[];let cur='',inQ=false;
+    for(const ch of line){if(ch==='"'){inQ=!inQ;}else if(ch===','&&!inQ){cells.push(cur.trim());cur='';}else{cur+=ch;}}
+    cells.push(cur.trim());
+    const obj={};hdrs.forEach((h,i)=>{obj[h]=(cells[i]||'').replace(/^"|"$/g,'').trim();});return obj;
+  });
+  return normaliseRows(raw);
+}
+function normaliseRows(raw){
+  const headers = Object.keys(raw[0]||{});
+  const keys = {};
+  Object.keys(COL).forEach(c => { keys[c] = findKey(headers, c); });
+
+  // Validate required columns
+  if(!keys.usdAmt)   throw new Error('Required column "USD Amount" not found. Check your file headers.');
+  if(!keys.paidYear) throw new Error('Required column "Paid Year" not found. Check your file headers.');
+  if(!keys.paidMonth)throw new Error('Required column "Paid Month" not found. Check your file headers.');
+  if(!keys.vendor)   throw new Error('Required column "Vendor" not found. Check your file headers.');
+
+  // Log what was detected (visible in browser console)
+  console.log('Column mapping detected:', {
+    usdAmt: keys.usdAmt, paidYear: keys.paidYear, paidMonth: keys.paidMonth,
+    vendor: keys.vendor, category: keys.category, customView: keys.customView,
+    source: keys.source, status: keys.status, currency: keys.currency,
+  });
+
+  return raw.map(r => ({
+    source:      keys.source      ? r[keys.source]      : '',
+    createdAt:   keys.createdAt   ? r[keys.createdAt]   : '',
+    invoiceId:   keys.invoiceId   ? r[keys.invoiceId]   : '',
+    invoiceNum:  keys.invoiceNum  ? r[keys.invoiceNum]  : '',
+    invoiceDate: keys.invoiceDate ? r[keys.invoiceDate] : '',
+    schedDate:   keys.schedDate   ? r[keys.schedDate]   : '',
+    paidYear:    keys.paidYear    ? r[keys.paidYear]    : '',
+    paidMonth:   keys.paidMonth   ? r[keys.paidMonth]   : '',
+    vendor:      keys.vendor      ? r[keys.vendor]      : 'Unknown',
+    customView:  keys.customView  ? r[keys.customView]  : '',
+    department:  keys.department  ? r[keys.department]  : '',
+    status:      keys.status      ? r[keys.status]      : '',
+    currency:    keys.currency    ? r[keys.currency]    : 'USD',   // "Currency" column
+    amtLocal:    keys.amtLocal    ? r[keys.amtLocal]    : '',      // "Amount (in Local FX)"
+    usdAmt:      keys.usdAmt      ? r[keys.usdAmt]      : '0',    // "USD Amount" ← used for all values
+    category:    keys.category    ? r[keys.category]    : 'Uncategorized',
+  }));
+}
+
+// ── PROCESS ROWS: 2025 & 2026 ONLY ────────────────────────────────────────────
+function processRows(rows){
+  function parseAmt(s){return Math.abs(parseFloat(String(s||'0').replace(/[$,\s]/g,'')));}
+  function parsePeriod(r){
+    if(r.paidYear&&r.paidMonth){
+      const yr=parseInt(r.paidYear);
+      const monRaw=String(r.paidMonth).trim();
+      const mon=isNaN(parseInt(monRaw))?new Date(monRaw+' 1 2000').getMonth():parseInt(monRaw)-1;
+      if(!isNaN(yr)&&mon>=0&&mon<=11)return{yr,mon};
+    }
+    if(r.invoiceDate){const d=new Date(r.invoiceDate);if(!isNaN(d.getTime()))return{yr:d.getFullYear(),mon:d.getMonth()};}
+    return null;
+  }
+
+  let total24=0;
+  const m25=Array(12).fill(0),m26=Array(12).fill(0);
+  const src25Arr={},src26Tot={};
+  const vend25={},vend26={},cat25={},cat26={},cv25={},cv26={};
+  const inv25=Array(12).fill(0),inv26=Array(12).fill(0);
+  const statusCounts={},statusMonthly={paid:Array(12).fill(0),scheduled:Array(12).fill(0),pending:Array(12).fill(0),cancelled:Array(12).fill(0)};
+  const currencyCounts={};
+  const daysArr=[],daysM=Array(12).fill(0),daysMC=Array(12).fill(0);
+  let totalInvoiceCount=0;
+
+  rows.forEach(r=>{
+    const p=parsePeriod(r); if(!p)return;
+    const{yr,mon}=p;
+    const amt=parseAmt(r.usdAmt); if(!amt||isNaN(amt))return;
+    const src=r.source||'Unknown',vend=r.vendor||'Unknown',cat=r.category||'Uncategorized',cv=r.customView||'(none)';
+    const status=(r.status||'unknown').toLowerCase().trim();
+    const curr=(r.currency||'USD').trim().toUpperCase()||'USD';  // "Currency" column
+    const skey =
+      /^(paid|complete|payment.?complete)/i.test(status)                ? 'paid'      :
+      /^(scheduled|approved|processing|payment.?process)/i.test(status) ? 'scheduled' :
+      /^(pending|open|submitted|in.?review|in.?approval)/i.test(status) ? 'pending'   :
+      /^(draft|new)/i.test(status)                                      ? 'draft'     :
+      /^(cancelled|canceled|void|voided|rejected|failed|declined|decline)/i.test(status) ? 'cancelled' :
+      'pending';
+    const valid = !/^(cancelled|canceled|void|voided|rejected|failed|declined|decline|draft|new)/i.test(status);
+
+    // Capture 2024 for Year Summary panel
+    if(yr===2024&&valid){total24+=amt;}
+
+    statusCounts[skey]=(statusCounts[skey]||0)+1;
+    currencyCounts[curr]=(currencyCounts[curr]||0)+1;
+    totalInvoiceCount++;
+    if(yr===2025&&mon!==null){
+      if(skey==='paid')statusMonthly.paid[mon]++;
+      else if(skey==='scheduled')statusMonthly.scheduled[mon]++;
+      else if(skey==='cancelled')statusMonthly.cancelled[mon]++;
+      else statusMonthly.pending[mon]++;
+    }
+
+    if(r.invoiceDate&&r.schedDate){
+      const invD=new Date(r.invoiceDate),schD=new Date(r.schedDate);
+      if(!isNaN(invD)&&!isNaN(schD)){const diff=Math.round((schD-invD)/86400000);if(diff>=0&&diff<365){daysArr.push(diff);daysM[mon]+=diff;daysMC[mon]++;}}
+    }
+
+    if(!valid)return;
+    if(yr!==2025&&yr!==2026)return; // chart data: 2025 & 2026 only
+    if(yr===2025){
+      m25[mon]+=amt;
+      src25Arr[src]=src25Arr[src]||Array(12).fill(0); src25Arr[src][mon]+=amt;
+      vend25[vend]=(vend25[vend]||0)+amt; cat25[cat]=(cat25[cat]||0)+amt; cv25[cv]=(cv25[cv]||0)+amt;
+      inv25[mon]++;
+    } else {
+      m26[mon]+=amt;
+      src26Tot[src]=(src26Tot[src]||0)+amt;
+      vend26[vend]=(vend26[vend]||0)+amt; cat26[cat]=(cat26[cat]||0)+amt; cv26[cv]=(cv26[cv]||0)+amt;
+      inv26[mon]++;
+    }
+  });
+
+  let last26=-1; for(let m=11;m>=0;m--){if(m26[m]>0){last26=m;break;}}
+  const months26=last26>=0?MON.slice(0,last26+1):[];
+  const total25=m25.reduce((a,b)=>a+b,0),total26=m26.reduce((a,b)=>a+b,0);
+
+  const srcBySpend=Object.entries(src25Arr).map(([n,arr])=>({n,tot:arr.reduce((a,b)=>a+b,0)})).sort((a,b)=>b.tot-a.tot).slice(0,6).map(x=>x.n);
+  const srcTot25=srcBySpend.map(n=>(src25Arr[n]||Array(12).fill(0)).reduce((a,b)=>a+b,0));
+  const srcTot26=srcBySpend.map(n=>src26Tot[n]||0);
+  const src25mat=srcBySpend.map(n=>src25Arr[n]||Array(12).fill(0));
+
+  const vendors=Object.entries(vend25).sort((a,b)=>b[1]-a[1]).slice(0,20).map(([name,y25])=>{
+    const matchRow=rows.find(r=>r.vendor===name);
+    return{name,y25:Math.round(y25),y26:Math.round(vend26[name]||0),cat:matchRow?.category||'Uncategorized',src:matchRow?.source||'Unknown',cv:matchRow?.customView||'(none)'};
+  });
+  const cats=Object.entries(cat25).sort((a,b)=>b[1]-a[1]).slice(0,14).map(([cat,y25])=>({cat,y25:Math.round(y25),y26:Math.round(cat26[cat]||0)}));
+  const cvs=Object.entries(cv25).sort((a,b)=>b[1]-a[1]).map(([name,y25])=>({name,y25:Math.round(y25),y26:Math.round(cv26[name]||0)}));
+  const avgDaysToPay=daysArr.length?Math.round(daysArr.reduce((a,b)=>a+b,0)/daysArr.length):null;
+  const avgDaysMonthly=daysM.map((sum,i)=>daysMC[i]?Math.round(sum/daysMC[i]):0);
+  const invTotal25=inv25.reduce((a,b)=>a+b,0),invTotal26=inv26.reduce((a,b)=>a+b,0);
+
+  console.log(`2025: $${total25.toLocaleString()} (${invTotal25} inv) | 2026 YTD [${months26.join(',')}]: $${total26.toLocaleString()} (${invTotal26} inv)`);
+
+  return{mon25:m25.map(v=>Math.round(v)),mon26:m26.map(v=>Math.round(v)),total25,total26,total24:Math.round(total24),months26,
+    src25:src25mat,srcTot25,srcTot26,srcNames:srcBySpend,srcColors:SRC_PAL.slice(0,srcBySpend.length),
+    vendors,cats,cvs,inv25,inv26,invTotal25,invTotal26,
+    statusCounts,statusMonthly,currencyCounts,avgDaysToPay,avgDaysMonthly};
+}
+
+// ── TOAST & UPLOAD ────────────────────────────────────────────────────────────
+let _tt;
+function toast(msg,type=''){clearTimeout(_tt);const el=document.getElementById('toast');el.textContent=msg;el.className='toast'+(type?' '+type:'');requestAnimationFrame(()=>el.classList.add('show'));_tt=setTimeout(()=>el.classList.remove('show'),3800);}
+
+document.getElementById('fi').addEventListener('change',function(e){
+  const file=e.target.files[0];if(!file)return;
+  const ext=file.name.split('.').pop().toLowerCase();
+  function onSuccess(rows){
+    _rawRows=rows;
+    const data=processRows(rows);
+    _dashData=data;
+    _rawData=data;          // store unfiltered source for filter re-application
+    _excludedCats.clear();  // reset exclusions on new upload
+    initDashboard(data);
+    document.getElementById('tb-badge').textContent=file.name;
+    document.getElementById('tb-badge').className='badge live';
+    document.getElementById('tb-badge').style.display='';
+    document.getElementById('reset-btn').style.display='flex';
+    document.getElementById('dl-all-btn').style.display='flex';
+    toast('Dashboard updated — showing 2025 & 2026 data only','ok');
+  }
+  function onError(err){toast('Error: '+err.message,'err');console.error(err);}
+  if(ext==='xlsx'||ext==='xls'){const r=new FileReader();r.onload=ev=>{try{onSuccess(parseExcelFile(ev.target.result));}catch(err){onError(err);}};r.readAsArrayBuffer(file);}
+  else{const r=new FileReader();r.onload=ev=>{try{onSuccess(parseCSVText(ev.target.result));}catch(err){onError(err);}};r.readAsText(file);}
+  this.value='';
+});
+
+document.getElementById('dl-all-btn').addEventListener('click', dlFullData);
+document.getElementById('reset-btn').addEventListener('click',function(){
+  _rawData = DUMMY;
+  _rawRows = null;
+  _excludedCats.clear();
+  initDashboard(DUMMY);
+  document.getElementById('tb-badge').style.display='none';
+  this.style.display='none';
+  toast('Reset to sample data');
+});
+
+</script>
+</body>
+</html>
